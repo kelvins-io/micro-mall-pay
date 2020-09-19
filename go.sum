@@ -46,6 +46,7 @@ gitea.com/xorm/sqlfiddle v0.0.0-20180821085327-62ce714f951a/go.mod h1:EXuID2Zs0p
 gitee.com/cristiane/go-common v0.0.0-20200103100912-9b4de946a640/go.mod h1:EX6uv/8C8ThHXrkpStwKupS4Ex8QX53EwuAf3/BzPoY=
 gitee.com/cristiane/go-common v1.0.1/go.mod h1:EX6uv/8C8ThHXrkpStwKupS4Ex8QX53EwuAf3/BzPoY=
 gitee.com/cristiane/micro-mall-sku v0.0.0-20200614093048-a2b9b236940a h1:MwiUlcsOm2wKBj2LAxXUP3Tb1CM09fG5Ak6IklcD/vQ=
+gitee.com/cristiane/micro-mall-sku v0.0.0-20200909135151-da82a5cdf58b/go.mod h1:R0KW6tkRRataddJxhcubiHIeG4+6eXkpMndbzmEN8o8=
 gitee.com/cristiane/micro-mall-users v0.0.0-20200614131643-90408a69a6e1 h1:hyBh2thhZWnDvzdeAzSHzwG11+wn4e7ZbR97qH/Q+4s=
 gitee.com/cristiane/micro-mall-users v0.0.0-20200905175913-5c852df4d247 h1:ZSI0vRf8fUOawHsFni1+g7wwgqrv7fqGvnT6lusahiI=
 gitee.com/cristiane/micro-mall-users v0.0.0-20200905175913-5c852df4d247/go.mod h1:KV/mKJVx5PxLatO+jROTFQnF3vsPCHvcsbXGIX0bX04=
@@ -74,6 +75,8 @@ gitee.com/kelvins-io/kelvins v1.1.1 h1:ez+NGENM4JLslxMPvlY73JJ3fMqqeG67nz6mbA9r2
 gitee.com/kelvins-io/kelvins v1.1.1/go.mod h1:htfrz3VuFQgo9mLILIjYtVZSixYm1/Kchj/WeuPs6C8=
 gitee.com/kelvins-io/kelvins v1.1.2 h1:Fs2nwYWVskG9tvBnyhmNHAwPX0ehp4JRtAFnXbC8d6I=
 gitee.com/kelvins-io/kelvins v1.1.2/go.mod h1:htfrz3VuFQgo9mLILIjYtVZSixYm1/Kchj/WeuPs6C8=
+gitee.com/kelvins-io/kelvins v1.2.1 h1:urUJnLyncNjrHuGeralardvcUx7a0pJ6EKqFh7YdrzE=
+gitee.com/kelvins-io/kelvins v1.2.1/go.mod h1:JWjwU4Htjti5Z9CMIb4/Os3HNSSXFe2QTHuwoc25wxM=
 gitee.com/kelvins-io/service-config v1.0.0 h1:54axasZXL4BMcl/d1OXyE84OKRB/yJqJLYTwsHdY2Ko=
 gitee.com/kelvins-io/service-config v1.0.0/go.mod h1:htuk7Oj0ifRcwgqSJf45IsN1rSq9kEsje/fcQClQS+Y=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=

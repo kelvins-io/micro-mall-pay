@@ -11,60 +11,6 @@
     "application/json"
   ],
   "paths": {
-    "/v1/trade/cancel": {
-      "put": {
-        "summary": "收单取消",
-        "operationId": "TradeCancel",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeCancelResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeCancelRequest"
-            }
-          }
-        ],
-        "tags": [
-          "PayBusinessService"
-        ]
-      }
-    },
-    "/v1/trade/cancel/query": {
-      "put": {
-        "summary": "统一收单退款接口",
-        "operationId": "TradeRefund",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeRefundResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeRefundRequest"
-            }
-          }
-        ],
-        "tags": [
-          "PayBusinessService"
-        ]
-      }
-    },
     "/v1/trade/pay": {
       "post": {
         "summary": "统一收单支付",
@@ -84,33 +30,6 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/pay_businessTradePayRequest"
-            }
-          }
-        ],
-        "tags": [
-          "PayBusinessService"
-        ]
-      }
-    },
-    "/v1/trade/query": {
-      "post": {
-        "summary": "统一收单查询",
-        "operationId": "TradeQuery",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeQueryResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeQueryRequest"
             }
           }
         ],
@@ -159,12 +78,6 @@
         "ACCOUNT_LOCK"
       ],
       "default": "SUCCESS"
-    },
-    "pay_businessTradeCancelRequest": {
-      "type": "object"
-    },
-    "pay_businessTradeCancelResponse": {
-      "type": "object"
     },
     "pay_businessTradeGoodsDetail": {
       "type": "object",
@@ -221,18 +134,6 @@
           "type": "string"
         }
       }
-    },
-    "pay_businessTradeQueryRequest": {
-      "type": "object"
-    },
-    "pay_businessTradeQueryResponse": {
-      "type": "object"
-    },
-    "pay_businessTradeRefundRequest": {
-      "type": "object"
-    },
-    "pay_businessTradeRefundResponse": {
-      "type": "object"
     }
   }
 }

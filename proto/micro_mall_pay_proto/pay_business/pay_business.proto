@@ -13,27 +13,27 @@ service PayBusinessService {
             body:"*"
         };
     }
-    // 统一收单查询
-    rpc TradeQuery(TradeQueryRequest) returns (TradeQueryResponse) {
-        option (google.api.http) = {
-            post: "/v1/trade/query"
-            body:"*"
-        };
-    }
-    // 收单取消
-    rpc TradeCancel(TradeCancelRequest) returns (TradeCancelResponse) {
-        option (google.api.http) = {
-            put: "/v1/trade/cancel"
-            body:"*"
-        };
-    }
-    // 统一收单退款接口
-    rpc TradeRefund(TradeRefundRequest) returns (TradeRefundResponse) {
-        option (google.api.http) = {
-            put: "/v1/trade/cancel/query"
-            body:"*"
-        };
-    }
+//    // 统一收单查询
+//    rpc TradeQuery(TradeQueryRequest) returns (TradeQueryResponse) {
+//        option (google.api.http) = {
+//            post: "/v1/trade/query"
+//            body:"*"
+//        };
+//    }
+//    // 收单取消
+//    rpc TradeCancel(TradeCancelRequest) returns (TradeCancelResponse) {
+//        option (google.api.http) = {
+//            put: "/v1/trade/cancel"
+//            body:"*"
+//        };
+//    }
+//    // 统一收单退款接口
+//    rpc TradeRefund(TradeRefundRequest) returns (TradeRefundResponse) {
+//        option (google.api.http) = {
+//            put: "/v1/trade/cancel/query"
+//            body:"*"
+//        };
+//    }
 }
 
 enum RetCode {
