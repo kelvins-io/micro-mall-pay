@@ -7,11 +7,12 @@ require (
 	gitee.com/kelvins-io/kelvins v1.2.1
 	github.com/golang/protobuf v1.4.2
 	github.com/gomodule/redigo v2.0.0+incompatible
+	github.com/google/uuid v1.1.1
 	github.com/grpc-ecosystem/grpc-gateway v1.14.7
-	github.com/qiniu/qmgo v0.7.0
 	github.com/satori/go.uuid v1.2.0
-	go.mongodb.org/mongo-driver v1.4.0
+	github.com/shopspring/decimal v1.2.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	google.golang.org/grpc v1.32.0
+	google.golang.org/protobuf v1.25.0
 	xorm.io/xorm v1.0.3
 )

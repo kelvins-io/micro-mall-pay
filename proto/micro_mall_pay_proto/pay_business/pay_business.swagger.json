@@ -11,42 +11,73 @@
     "application/json"
   ],
   "paths": {
-    "/v1/trade/cancel": {
-      "put": {
-        "summary": "收单取消",
-        "operationId": "TradeCancel",
+    "/v1/trade/account": {
+      "get": {
+        "summary": "获取账户",
+        "operationId": "PayBusinessService_GetAccount",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/pay_businessTradeCancelResponse"
+              "$ref": "#/definitions/pay_businessGetAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
             }
           }
         },
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeCancelRequest"
-            }
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "account_type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "Person",
+              "Company",
+              "System"
+            ],
+            "default": "Person"
+          },
+          {
+            "name": "coin_type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "CNY",
+              "USD"
+            ],
+            "default": "CNY"
           }
         ],
         "tags": [
           "PayBusinessService"
         ]
-      }
-    },
-    "/v1/trade/cancel/query": {
-      "put": {
-        "summary": "统一收单退款接口",
-        "operationId": "TradeRefund",
+      },
+      "post": {
+        "summary": "创建账户",
+        "operationId": "PayBusinessService_CreateAccount",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/pay_businessTradeRefundResponse"
+              "$ref": "#/definitions/pay_businessCreateAccountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
             }
           }
         },
@@ -56,7 +87,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/pay_businessTradeRefundRequest"
+              "$ref": "#/definitions/pay_businessCreateAccountRequest"
             }
           }
         ],
@@ -68,12 +99,18 @@
     "/v1/trade/pay": {
       "post": {
         "summary": "统一收单支付",
-        "operationId": "TradePay",
+        "operationId": "PayBusinessService_TradePay",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/pay_businessTradePayResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
             }
           }
         },
@@ -91,36 +128,32 @@
           "PayBusinessService"
         ]
       }
-    },
-    "/v1/trade/query": {
-      "post": {
-        "summary": "统一收单查询",
-        "operationId": "TradeQuery",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeQueryResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/pay_businessTradeQueryRequest"
-            }
-          }
-        ],
-        "tags": [
-          "PayBusinessService"
-        ]
-      }
     }
   },
   "definitions": {
+    "pay_businessAccountEntry": {
+      "type": "object",
+      "properties": {
+        "account_type": {
+          "$ref": "#/definitions/pay_businessAccountType"
+        },
+        "coin_type": {
+          "$ref": "#/definitions/pay_businessCoinType"
+        },
+        "balance": {
+          "type": "string"
+        }
+      }
+    },
+    "pay_businessAccountType": {
+      "type": "string",
+      "enum": [
+        "Person",
+        "Company",
+        "System"
+      ],
+      "default": "Person"
+    },
     "pay_businessCoinType": {
       "type": "string",
       "enum": [
@@ -140,6 +173,45 @@
         }
       }
     },
+    "pay_businessCreateAccountRequest": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string"
+        },
+        "account_type": {
+          "$ref": "#/definitions/pay_businessAccountType"
+        },
+        "coin_type": {
+          "$ref": "#/definitions/pay_businessCoinType"
+        },
+        "balance": {
+          "type": "string"
+        }
+      }
+    },
+    "pay_businessCreateAccountResponse": {
+      "type": "object",
+      "properties": {
+        "common": {
+          "$ref": "#/definitions/pay_businessCommonResponse"
+        },
+        "account_code": {
+          "type": "string"
+        }
+      }
+    },
+    "pay_businessGetAccountResponse": {
+      "type": "object",
+      "properties": {
+        "entry_list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pay_businessAccountEntry"
+          }
+        }
+      }
+    },
     "pay_businessRetCode": {
       "type": "string",
       "enum": [
@@ -156,33 +228,29 @@
         "SKU_AMOUNT_NOT_ENOUGH",
         "USER_BALANCE_NOT_ENOUGH",
         "MERCHANT_BALANCE_NOT_ENOUGH",
-        "ACCOUNT_LOCK"
+        "ACCOUNT_LOCK",
+        "MERCHANT_ACCOUNT_NOT_EXIST",
+        "MERCHANT_ACCOUNT_STATE_LOCK",
+        "USER_ACCOUNT_NOT_EXIST",
+        "USER_ACCOUNT_STATE_LOCK",
+        "DECIMAL_PARSE_ERR",
+        "TRANSACTION_FAILED",
+        "ACCOUNT_EXIST"
       ],
       "default": "SUCCESS"
-    },
-    "pay_businessTradeCancelRequest": {
-      "type": "object"
-    },
-    "pay_businessTradeCancelResponse": {
-      "type": "object"
     },
     "pay_businessTradeGoodsDetail": {
       "type": "object",
       "properties": {
         "amount": {
-          "type": "string",
-          "format": "int64"
-        },
-        "coin_type": {
-          "$ref": "#/definitions/pay_businessCoinType"
+          "type": "string"
         },
         "reduction": {
-          "type": "string",
-          "format": "int64"
+          "type": "string"
         }
       }
     },
-    "pay_businessTradePayRequest": {
+    "pay_businessTradePayEntry": {
       "type": "object",
       "properties": {
         "out_trade_no": {
@@ -203,11 +271,32 @@
         "attach": {
           "type": "string"
         },
+        "detail": {
+          "$ref": "#/definitions/pay_businessTradeGoodsDetail"
+        }
+      }
+    },
+    "pay_businessTradePayRequest": {
+      "type": "object",
+      "properties": {
         "account": {
           "type": "string"
         },
-        "detail": {
-          "$ref": "#/definitions/pay_businessTradeGoodsDetail"
+        "coin_type": {
+          "$ref": "#/definitions/pay_businessCoinType"
+        },
+        "entry_list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pay_businessTradePayEntry"
+          }
+        },
+        "op_uid": {
+          "type": "string",
+          "format": "int64"
+        },
+        "op_ip": {
+          "type": "string"
         }
       }
     },
@@ -222,17 +311,38 @@
         }
       }
     },
-    "pay_businessTradeQueryRequest": {
-      "type": "object"
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "type_url": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
     },
-    "pay_businessTradeQueryResponse": {
-      "type": "object"
-    },
-    "pay_businessTradeRefundRequest": {
-      "type": "object"
-    },
-    "pay_businessTradeRefundResponse": {
-      "type": "object"
+    "runtimeError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
     }
   }
 }
