@@ -158,7 +158,7 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (txId stri
 			return
 		}
 		// 扣减用余额，增加商余额
-		userAccountQ := map[string]interface{}{
+		whereUserAccount := map[string]interface{}{
 			"owner":   userAccount.Owner,
 			"balance": userAccount.Balance,
 		}
@@ -166,10 +166,10 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (txId stri
 			"balance":     fromBalance.String(),
 			"update_time": now,
 		}
-		r, err := repository.ChangeAccount(tx, userAccountQ, userAccountChange)
+		r, err := repository.ChangeAccount(tx, whereUserAccount, userAccountChange)
 		if err != nil {
 			_ = tx.Rollback()
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, userAccountQ, userAccountChange)
+			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereUserAccount, userAccountChange)
 			retCode = code.ErrorServer
 			return
 		}
@@ -183,8 +183,8 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (txId stri
 		userBalance = fromBalance
 		userAccount.Balance = userBalance.String()
 
-		// 增加商户账户余额
-		merchantAccountQ := map[string]interface{}{
+		// 增加商户账户余额-，增加商户用户余额应该放在事务最后阶段
+		whereMerchantAccount := map[string]interface{}{
 			"owner":   merchantAccount.Owner,
 			"balance": merchantAccount.Balance,
 		}
@@ -192,10 +192,10 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (txId stri
 			"balance":     toBalance.String(),
 			"update_time": now,
 		}
-		r, err = repository.ChangeAccount(tx, merchantAccountQ, merchantAccountChange)
+		r, err = repository.ChangeAccount(tx, whereMerchantAccount, merchantAccountChange)
 		if err != nil {
 			_ = tx.Rollback()
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, userAccountQ, userAccountChange)
+			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereMerchantAccount, userAccountChange)
 			retCode = code.ErrorServer
 			return
 		}
