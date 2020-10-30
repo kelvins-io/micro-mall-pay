@@ -8,7 +8,9 @@ import (
 	"gitee.com/cristiane/micro-mall-pay/pkg/util"
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_pay_proto/pay_business"
 	"gitee.com/cristiane/micro-mall-pay/repository"
+	"gitee.com/cristiane/micro-mall-pay/vars"
 	"gitee.com/kelvins-io/common/errcode"
+	"gitee.com/kelvins-io/common/json"
 	"gitee.com/kelvins-io/kelvins"
 	"github.com/shopspring/decimal"
 	"strings"
@@ -207,8 +209,35 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (txId stri
 		}
 	}
 
-	_ = tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		retCode = code.ErrorServer
+		return
+	}
 	// 触发支付消息
+	pushSer := NewPushNoticeService(vars.TradePayQueueServer, PushMsgTag{
+		DeliveryTag:    args.TaskNameTradePayNotice,
+		DeliveryErrTag: args.TaskNameTradePayNoticeErr,
+		RetryCount:     kelvins.QueueAMQPSetting.TaskRetryCount,
+		RetryTimeout:   kelvins.QueueAMQPSetting.TaskRetryTimeout,
+	})
+	businessMsg := args.CommonBusinessMsg{
+		Type: args.TradePayEventTypeCreate,
+		Tag:  args.GetMsg(args.TradePayEventTypeCreate),
+		UUID: util.GetUUID(),
+		Msg: json.MarshalToStringNoError(args.TradePayNotice{
+			Uid:    req.OpUid,
+			Time:   util.ParseTimeOfStr(time.Now().Unix()),
+			TxCode: txId,
+		}),
+	}
+	taskUUID, retCode := pushSer.PushMessage(ctx, businessMsg)
+	if retCode != code.Success {
+		kelvins.ErrLogger.Errorf(ctx, "trade pay businessMsg: %+v  notice send err: ", businessMsg, errcode.GetErrMsg(retCode))
+	} else {
+		kelvins.BusinessLogger.Infof(ctx, "trade pay businessMsg businessMsg: %+v  taskUUID :%v", businessMsg, taskUUID)
+	}
+
 	return
 }
 
