@@ -27,6 +27,7 @@ type TradePayNotice struct {
 	Uid    int64  `json:"uid"`
 	Time   string `json:"time"`
 	TxCode string `json:"tx_code"`
+	PayId  string `json:"pay_id"`
 }
 
 const (

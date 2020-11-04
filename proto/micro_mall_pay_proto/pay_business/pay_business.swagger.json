@@ -235,7 +235,9 @@
         "USER_ACCOUNT_STATE_LOCK",
         "DECIMAL_PARSE_ERR",
         "TRANSACTION_FAILED",
-        "ACCOUNT_EXIST"
+        "ACCOUNT_EXIST",
+        "TRADE_PAY_RUN",
+        "TRADE_PAY_SUCCESS"
       ],
       "default": "SUCCESS"
     },
@@ -296,6 +298,9 @@
           "format": "int64"
         },
         "op_ip": {
+          "type": "string"
+        },
+        "out_tx_code": {
           "type": "string"
         }
       }

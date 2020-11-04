@@ -41,6 +41,10 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 			codeRsp = pay_business.RetCode_DECIMAL_PARSE_ERR
 		case code.TransactionFailed:
 			codeRsp = pay_business.RetCode_TRANSACTION_FAILED
+		case code.TradePayRun:
+			codeRsp = pay_business.RetCode_TRADE_PAY_RUN
+		case code.TradePaySuccess:
+			codeRsp = pay_business.RetCode_TRADE_PAY_SUCCESS
 		case code.ErrorServer:
 			codeRsp = pay_business.RetCode_ERROR
 		}

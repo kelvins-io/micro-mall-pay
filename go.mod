@@ -5,6 +5,7 @@ go 1.13
 require (
 	gitee.com/kelvins-io/common v1.0.2
 	gitee.com/kelvins-io/kelvins v1.2.1
+	github.com/RichardKnop/machinery v1.9.1
 	github.com/golang/protobuf v1.4.2
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/uuid v1.1.1
