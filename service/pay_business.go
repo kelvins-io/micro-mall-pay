@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"gitee.com/cristiane/micro-mall-pay/model/args"
 	"gitee.com/cristiane/micro-mall-pay/model/mysql"
 	"gitee.com/cristiane/micro-mall-pay/pkg/code"
@@ -231,14 +232,16 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 		}
 		// 扣减用余额，增加商余额
 		whereUserAccount := map[string]interface{}{
-			"owner":   userAccount.Owner,
-			"balance": userAccount.Balance,
+			"owner":      userAccount.Owner,
+			"balance":    userAccount.Balance,
+			"last_tx_id": userAccount.LastTxId, // 防止更新期间账户变更
 		}
 		userAccountChange := map[string]interface{}{
 			"balance":     fromBalance.String(),
 			"update_time": now,
+			"last_tx_id":  payId, // 记录本次支付事务ID，对标支付记录
 		}
-		r, err := repository.ChangeAccount(tx, whereUserAccount, userAccountChange)
+		rowsAffected, err := repository.ChangeAccount(tx, whereUserAccount, userAccountChange)
 		if err != nil {
 			errRollback := tx.Rollback()
 			if errRollback != nil {
@@ -248,8 +251,10 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 			retCode = code.ErrorServer
 			return
 		}
+
 		// 没有符合条件的数据行，说明没有更新成功
-		if r <= 0 {
+		fmt.Println("更新用户账户后 rowsAffected==", rowsAffected)
+		if rowsAffected != 1 {
 			errRollback := tx.Rollback()
 			if errRollback != nil {
 				kelvins.ErrLogger.Errorf(ctx, "GetAccount Rollback err: %v", errRollback)
@@ -259,18 +264,21 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 		}
 		// 更新扣减了余额后的用户账户
 		userBalance = fromBalance
-		userAccount.Balance = userBalance.String()
+		userAccount.Balance = userBalance.String() // 用户账户剩余金额
+		userAccount.LastTxId = payId
 
 		// 增加商户账户余额-，增加商户用户余额应该放在事务最后阶段
 		whereMerchantAccount := map[string]interface{}{
-			"owner":   merchantAccount.Owner,
-			"balance": merchantAccount.Balance,
+			"owner":      merchantAccount.Owner,
+			"balance":    merchantAccount.Balance,
+			"last_tx_id": merchantAccount.LastTxId, // 防止更新期间账户变更
 		}
 		merchantAccountChange := map[string]interface{}{
 			"balance":     toBalance.String(),
 			"update_time": now,
+			"last_tx_id":  payId, // 记录本次支付事务ID，对标支付记录
 		}
-		r, err = repository.ChangeAccount(tx, whereMerchantAccount, merchantAccountChange)
+		rowsAffected, err = repository.ChangeAccount(tx, whereMerchantAccount, merchantAccountChange)
 		if err != nil {
 			errRollback := tx.Rollback()
 			if errRollback != nil {
@@ -280,8 +288,9 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 			retCode = code.ErrorServer
 			return
 		}
+		fmt.Println("更新商户账户后 rowsAffected==", rowsAffected)
 		// 没有符合条件的数据行，说明没有更新成功
-		if r <= 0 {
+		if rowsAffected != 1 {
 			errRollback := tx.Rollback()
 			if errRollback != nil {
 				kelvins.ErrLogger.Errorf(ctx, "GetAccount Rollback err: %v", errRollback)
@@ -339,6 +348,7 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 		CoinDesc:    "CNY",
 		State:       3,
 		AccountType: int(req.AccountType) + 1,
+		LastTxId:    accountCode, // 初始值等于AccountCode
 		CreateTime:  time.Now(),
 		UpdateTime:  time.Now(),
 	}

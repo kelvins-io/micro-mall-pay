@@ -9,15 +9,17 @@ const (
 )
 
 type Account struct {
-	AccountCode string    `xorm:"not null pk comment('账户主键') CHAR(50)"`
+	Id          int64     `xorm:"pk autoincr comment('自增ID') BIGINT"`
+	AccountCode string    `xorm:"not null comment('账户主键') CHAR(50)"`
 	Owner       string    `xorm:"not null comment('账户所有者') unique(account_index) CHAR(36)"`
 	Balance     string    `xorm:"comment('账户余额') DECIMAL(32,16)"`
-	CoinType    int       `xorm:"not null default 1 comment('币种类型，1-rmb，2-usdt') unique(account_index) TINYINT"`
+	CoinType    int       `xorm:"not null default 0 comment('币种类型，0-rmb，1-usdt') unique(account_index) TINYINT"`
 	CoinDesc    string    `xorm:"comment('币种描述') VARCHAR(64)"`
 	State       int       `xorm:"comment('状态，1无效，2锁定，3正常') TINYINT"`
-	AccountType int       `xorm:"not null comment('账户类型，1-个人账户，2-公司账户，3-系统账户') unique(account_index) TINYINT"`
+	AccountType int       `xorm:"not null pk comment('账户类型，1-个人账户，2-公司账户，3-系统账户') unique(account_index) TINYINT"`
 	CreateTime  time.Time `xorm:"not null default CURRENT_TIMESTAMP comment('创建时间') index DATETIME"`
 	UpdateTime  time.Time `xorm:"not null default CURRENT_TIMESTAMP comment('更新时间') DATETIME"`
+	LastTxId    string    `xorm:"not null default '99' comment('最后一次事务ID') CHAR(40)"`
 }
 
 type PayRecord struct {
