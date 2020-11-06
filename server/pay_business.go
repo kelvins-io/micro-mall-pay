@@ -21,7 +21,6 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 		Code: pay_business.RetCode_SUCCESS,
 		Msg:  "ok",
 	}
-
 	txId, retCode := service.TradePay(ctx, req)
 	codeRsp := pay_business.RetCode_SUCCESS
 	msgRsp := errcode.GetErrMsg(retCode)
@@ -41,6 +40,8 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 			codeRsp = pay_business.RetCode_DECIMAL_PARSE_ERR
 		case code.TransactionFailed:
 			codeRsp = pay_business.RetCode_TRANSACTION_FAILED
+		case code.TradePayExpire:
+			codeRsp = pay_business.RetCode_TRADE_PAY_EXPIRE
 		case code.TradePayRun:
 			codeRsp = pay_business.RetCode_TRADE_PAY_RUN
 		case code.TradePaySuccess:

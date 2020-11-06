@@ -25,6 +25,7 @@ const (
 	AccountExist             = 29000021
 	TradePayRun              = 29000022
 	TradePaySuccess          = 29000023
+	TradePayExpire           = 29000024
 )
 
 var ErrMap = make(map[int]string)
@@ -53,6 +54,7 @@ func init() {
 		AccountExist:             "账户已存在",
 		TradePayRun:              "订单已在支付中",
 		TradePaySuccess:          "订单已经支付",
+		TradePayExpire:           "订单支付时间过期",
 	}
 	errcode.RegisterErrMsgDict(dict)
 	for key, _ := range dict {

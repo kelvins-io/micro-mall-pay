@@ -237,7 +237,8 @@
         "TRANSACTION_FAILED",
         "ACCOUNT_EXIST",
         "TRADE_PAY_RUN",
-        "TRADE_PAY_SUCCESS"
+        "TRADE_PAY_SUCCESS",
+        "TRADE_PAY_EXPIRE"
       ],
       "default": "SUCCESS"
     },
