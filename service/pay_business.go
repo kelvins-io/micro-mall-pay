@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"gitee.com/cristiane/micro-mall-pay/model/args"
 	"gitee.com/cristiane/micro-mall-pay/model/mysql"
 	"gitee.com/cristiane/micro-mall-pay/pkg/code"
 	"gitee.com/cristiane/micro-mall-pay/pkg/util"
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_pay_proto/pay_business"
+	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_users_proto/users"
 	"gitee.com/cristiane/micro-mall-pay/repository"
 	"gitee.com/cristiane/micro-mall-pay/vars"
 	"gitee.com/kelvins-io/common/errcode"
@@ -49,20 +49,26 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 			return
 		}
 	}
-
+	// 触发支付事件通知
+	retCode = tradeEventNotice(ctx, req, payId)
+	if retCode != code.Success {
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			kelvins.ErrLogger.Errorf(ctx, "TradePay Rollback err: %v", errRollback)
+		}
+		return
+	}
 	err = tx.Commit()
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "TradePay Commit err: %v", err)
 		retCode = code.ErrorServer
 		return
 	}
-	// 触发支付事件通知
-	go tradeEventNotice(ctx, req, payId)
 
 	return
 }
 
-func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, payId string) {
+func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, payId string) int {
 	// 触发支付消息
 	pushSer := NewPushNoticeService(vars.TradePayQueueServer, PushMsgTag{
 		DeliveryTag:    args.TaskNameTradePayNotice,
@@ -78,7 +84,7 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 			Uid:    req.OpUid,
 			Time:   util.ParseTimeOfStr(time.Now().Unix()),
 			PayId:  payId,
-			TxCode: req.OutTxCode,
+			TxCode: req.OutTxCode, // 单次交易号（可能关联多个订单）
 		}),
 	}
 	taskUUID, retCode := pushSer.PushMessage(ctx, businessMsg)
@@ -87,6 +93,7 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 	} else {
 		kelvins.BusinessLogger.Infof(ctx, "trade pay businessMsg businessMsg: %+v  taskUUID :%v", businessMsg, taskUUID)
 	}
+	return retCode
 }
 
 func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRequest, i int, tx *xorm.Session, userAccount *mysql.Account) int {
@@ -225,7 +232,6 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereUserAccount, userAccountChange)
 		return code.ErrorServer
 	}
-	fmt.Println("更新用户余额 rowsAffected ==", rowsAffected)
 	// 没有符合条件的数据行，说明没有更新成功
 	if rowsAffected != 1 {
 		errRollback := tx.Rollback()
@@ -258,7 +264,6 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereMerchantAccount, userAccountChange)
 		return code.ErrorServer
 	}
-	fmt.Println("更新商户余额 rowsAffected ==", rowsAffected)
 	// 没有符合条件的数据行，说明没有更新成功
 	if rowsAffected != 1 {
 		errRollback := tx.Rollback()
@@ -331,12 +336,40 @@ func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_bu
 
 func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) (retCode int) {
 	retCode = code.Success
+	serverName := args.RpcServiceMicroMallUsers
+	conn, err := util.GetGrpcClient(serverName)
+	if err != nil {
+		kelvins.ErrLogger.Errorf(ctx, "GetGrpcClient %v,err: %v", serverName, err)
+		retCode = code.ErrorServer
+		return
+	}
+	defer conn.Close()
+	serve := users.NewUsersServiceClient(conn)
+	r := users.GetUserInfoRequest{
+		Uid: req.OpUid,
+	}
+	rsp, err := serve.GetUserInfo(ctx, &r)
+	if err != nil || rsp.Common.Code != users.RetCode_SUCCESS {
+		kelvins.ErrLogger.Errorf(ctx, "GetUserInfo %v,err: %v", serverName, err)
+		retCode = code.ErrorServer
+		return
+	}
+	if rsp.Info == nil || rsp.Info.AccountId == "" {
+		retCode = code.UserNotExist
+		return
+	}
+	if rsp.Info.AccountId != req.Account {
+		retCode = code.UserAccountNotExist
+		return
+	}
 	// 参数验证
 	outTradeNoList := make([]string, len(req.EntryList))
 	for i := 0; i < len(req.EntryList); i++ {
 		outTradeNoList[i] = req.EntryList[i].OutTradeNo
 	}
-	where := map[string]interface{}{}
+	where := map[string]interface{}{
+		"user": rsp.Info.AccountId,
+	}
 	payRecordList, _, err := repository.GetPayRecordList("out_trade_no,pay_state", where, outTradeNoList, nil, nil, 0, 0)
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "GetPayRecordList err: %v, outTradeNoList: %v", err, outTradeNoList)
