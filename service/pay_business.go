@@ -359,7 +359,7 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 		return
 	}
 	if rsp.Info.AccountId != req.Account {
-		retCode = code.UserAccountNotExist
+		retCode = code.TradeOrderNotMatchUser
 		return
 	}
 	// 参数验证

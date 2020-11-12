@@ -26,6 +26,8 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 	msgRsp := errcode.GetErrMsg(retCode)
 	if retCode != code.Success {
 		switch retCode {
+		case code.TradeOrderNotMatchUser:
+			codeRsp = pay_business.RetCode_TRADE_ORDER_NOT_MATCH_USER
 		case code.UserNotExist:
 			codeRsp = pay_business.RetCode_USER_NOT_EXIST
 		case code.UserAccountNotExist:
