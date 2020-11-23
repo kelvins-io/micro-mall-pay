@@ -84,6 +84,38 @@ func (p *PayServer) CreateAccount(ctx context.Context, req *pay_business.CreateA
 	return &result, nil
 }
 
-func (p *PayServer) GetAccount(ctx context.Context, req *pay_business.GetAccountRequest) (*pay_business.GetAccountResponse, error) {
-	return &pay_business.GetAccountResponse{}, nil
+func (p *PayServer) FindAccount(ctx context.Context, req *pay_business.FindAccountRequest) (*pay_business.FindAccountResponse, error) {
+	result := &pay_business.FindAccountResponse{EntryList: nil, Common: &pay_business.CommonResponse{
+		Code: pay_business.RetCode_SUCCESS,
+	}}
+	accountList, retCode := service.FindAccount(ctx, req)
+	if retCode != code.Success {
+		result.Common.Code = pay_business.RetCode_ERROR
+		return result, nil
+	}
+	result.EntryList = accountList
+	return result, nil
+}
+
+func (p *PayServer) AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) (*pay_business.AccountChargeResponse, error) {
+	result := &pay_business.AccountChargeResponse{Common: &pay_business.CommonResponse{
+		Code: pay_business.RetCode_SUCCESS,
+	}}
+	retCode := service.AccountCharge(ctx, req)
+	if retCode != code.Success {
+		switch retCode {
+		case code.TransactionFailed:
+			result.Common.Code = pay_business.RetCode_TRANSACTION_FAILED
+		case code.UserAccountNotExist:
+			result.Common.Code = pay_business.RetCode_USER_ACCOUNT_NOT_EXIST
+		case code.UserAccountStateLock:
+			result.Common.Code = pay_business.RetCode_USER_ACCOUNT_STATE_LOCK
+		case code.UserAccountStateInvalid:
+			result.Common.Code = pay_business.RetCode_USER_ACCOUNT_STATE_INVALID
+		default:
+			result.Common.Code = pay_business.RetCode_ERROR
+		}
+		return result, nil
+	}
+	return result, nil
 }

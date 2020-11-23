@@ -24,6 +24,19 @@ func CheckAccountExist(owner string, accountType, coinType int) (bool, error) {
 	return true, nil
 }
 
+func FindAccount(sqlSelect string, ownerList []string, accountType, coinType int) ([]mysql.Account, error) {
+	var result = make([]mysql.Account, 0)
+	var err error
+	session := kelvins.XORM_DBEngine.Table(mysql.TableAccount).
+		Select(sqlSelect).
+		In("owner", ownerList)
+	if accountType != 0 {
+		session = session.Where("account_type = ?", accountType)
+	}
+	err = session.Where("coin_type = ?", coinType).Find(&result)
+	return result, err
+}
+
 func GetAccountByTx(tx *xorm.Session, owner string, accountType, coinType int) (*mysql.Account, error) {
 	var model mysql.Account
 	var err error

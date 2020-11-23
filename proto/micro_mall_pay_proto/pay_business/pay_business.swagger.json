@@ -11,15 +11,15 @@
     "application/json"
   ],
   "paths": {
-    "/v1/trade/account": {
+    "/v1/account": {
       "get": {
         "summary": "获取账户",
-        "operationId": "PayBusinessService_GetAccount",
+        "operationId": "PayBusinessService_FindAccount",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/pay_businessGetAccountResponse"
+              "$ref": "#/definitions/pay_businessFindAccountResponse"
             }
           },
           "default": {
@@ -34,7 +34,11 @@
             "name": "owner",
             "in": "query",
             "required": false,
-            "type": "string"
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
           },
           {
             "name": "account_type",
@@ -63,7 +67,42 @@
         "tags": [
           "PayBusinessService"
         ]
-      },
+      }
+    },
+    "/v1/account/charge": {
+      "post": {
+        "summary": "账户充值",
+        "operationId": "PayBusinessService_AccountCharge",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pay_businessAccountChargeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pay_businessAccountChargeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "PayBusinessService"
+        ]
+      }
+    },
+    "/v1/account/init": {
       "post": {
         "summary": "创建账户",
         "operationId": "PayBusinessService_CreateAccount",
@@ -131,9 +170,43 @@
     }
   },
   "definitions": {
+    "pay_businessAccountChargeRequest": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "account_type": {
+          "$ref": "#/definitions/pay_businessAccountType"
+        },
+        "coin_type": {
+          "$ref": "#/definitions/pay_businessCoinType"
+        },
+        "amount": {
+          "type": "string"
+        },
+        "op_meta": {
+          "$ref": "#/definitions/pay_businessOperationMeta"
+        }
+      }
+    },
+    "pay_businessAccountChargeResponse": {
+      "type": "object",
+      "properties": {
+        "common": {
+          "$ref": "#/definitions/pay_businessCommonResponse"
+        }
+      }
+    },
     "pay_businessAccountEntry": {
       "type": "object",
       "properties": {
+        "owner": {
+          "type": "string"
+        },
         "account_type": {
           "$ref": "#/definitions/pay_businessAccountType"
         },
@@ -201,14 +274,35 @@
         }
       }
     },
-    "pay_businessGetAccountResponse": {
+    "pay_businessFindAccountResponse": {
       "type": "object",
       "properties": {
+        "common": {
+          "$ref": "#/definitions/pay_businessCommonResponse"
+        },
         "entry_list": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/pay_businessAccountEntry"
           }
+        }
+      }
+    },
+    "pay_businessOperationMeta": {
+      "type": "object",
+      "properties": {
+        "op_uid": {
+          "type": "string",
+          "format": "int64"
+        },
+        "op_ip": {
+          "type": "string"
+        },
+        "op_platform": {
+          "type": "string"
+        },
+        "op_device": {
+          "type": "string"
         }
       }
     },
@@ -239,7 +333,8 @@
         "TRADE_PAY_RUN",
         "TRADE_PAY_SUCCESS",
         "TRADE_PAY_EXPIRE",
-        "TRADE_ORDER_NOT_MATCH_USER"
+        "TRADE_ORDER_NOT_MATCH_USER",
+        "USER_ACCOUNT_STATE_INVALID"
       ],
       "default": "SUCCESS"
     },
