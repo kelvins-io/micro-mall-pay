@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"gitee.com/cristiane/micro-mall-pay/model/args"
 	"gitee.com/cristiane/micro-mall-pay/model/mysql"
 	"gitee.com/cristiane/micro-mall-pay/pkg/code"
@@ -10,6 +11,7 @@ import (
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_users_proto/users"
 	"gitee.com/cristiane/micro-mall-pay/repository"
 	"gitee.com/cristiane/micro-mall-pay/vars"
+	"gitee.com/kelvins-io/common/crypt"
 	"gitee.com/kelvins-io/common/errcode"
 	"gitee.com/kelvins-io/common/json"
 	"gitee.com/kelvins-io/kelvins"
@@ -26,7 +28,6 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 	if retCode != code.Success {
 		return
 	}
-
 	// 长事务，多次扣减用户账户在一个事务中完成
 	tx := kelvins.XORM_DBEngine.NewSession()
 	err := tx.Begin()
@@ -101,7 +102,6 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	payRecord := mysql.PayRecord{
 		TxId:        payId,
 		OutTradeNo:  req.EntryList[i].OutTradeNo,
-		TimeExpire:  time.Now().Add(30 * time.Minute),
 		NotifyUrl:   req.EntryList[i].NotifyUrl,
 		Description: req.EntryList[i].Description,
 		Merchant:    req.EntryList[i].Merchant,
@@ -197,12 +197,13 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		OpUid:           req.OpUid,
 		OpIp:            req.OpIp,
 		TxId:            payId,
-		Fingerprint:     time.Now().String(),
+		Fingerprint:     "",
 		PayType:         0,
 		PayDesc:         "交易支付",
 		CreateTime:      time.Now(),
 		UpdateTime:      time.Now(),
 	}
+	transaction.Fingerprint = genTransactionFingerprint(&transaction)
 	err = repository.CreateTransaction(tx, &transaction)
 	if err != nil {
 		errRollback := tx.Rollback()
@@ -274,6 +275,25 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 
 	return code.Success
+}
+
+// 生成交易指纹
+const appKeyTransaction = "ZpONco7fjvGEFgw4ymMX"
+
+func genTransactionFingerprint(transaction *mysql.Transaction) string {
+	params := map[string]string{
+		"FromAccountCode": transaction.FromAccountCode,
+		"FromBalance":     transaction.FromBalance,
+		"ToAccountCode":   transaction.ToAccountCode,
+		"ToBalance":       transaction.ToBalance,
+		"Amount":          transaction.Amount,
+		"OpUid":           fmt.Sprintf("%d", transaction.OpUid),
+		"OpIp":            transaction.OpIp,
+		"TxId":            transaction.TxId,
+		"PayType":         fmt.Sprintf("%d", transaction.PayType),
+		"CreateTime":      util.ParseTimeOfStr(transaction.CreateTime.UnixNano()),
+	}
+	return crypt.Md5Sign(params, appKeyTransaction)
 }
 
 func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_business.TradePayRequest) (*mysql.Account, int) {
@@ -370,7 +390,7 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 	where := map[string]interface{}{
 		"user": rsp.Info.AccountId,
 	}
-	payRecordList, _, err := repository.GetPayRecordList("out_trade_no,pay_state", where, outTradeNoList, nil, nil, 0, 0)
+	payRecordList, _, err := repository.GetPayRecordList("pay_state", where, outTradeNoList, nil, nil, 0, 0)
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "GetPayRecordList err: %v, outTradeNoList: %v", err, outTradeNoList)
 		retCode = code.ErrorServer
@@ -385,18 +405,31 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 			retCode = code.TradePaySuccess
 			return
 		}
-		// 超过支付过期时间
-		if time.Now().Sub(payRecordList[i].TimeExpire) >= 0 {
-			retCode = code.TradePayExpire
-			return
-		}
 	}
 	return
 }
 
 func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) (accountCode string, retCode int) {
 	retCode = code.Success
+	accountType := int(req.AccountType) + 1
+	exist, err := repository.CheckAccountExist(req.Owner, accountType, int(req.CoinType))
+	if err != nil {
+		kelvins.ErrLogger.Errorf(ctx, "CheckAccountExist err: %v", err)
+		retCode = code.ErrorServer
+		return
+	}
+	if exist {
+		retCode = code.AccountExist
+		return
+	}
 	accountCode = util.GetUUID()
+	tx := kelvins.XORM_DBEngine.NewSession()
+	err = tx.Begin()
+	if err != nil {
+		kelvins.ErrLogger.Errorf(ctx, "CreateAccount err: %v", err)
+		retCode = code.ErrorServer
+		return
+	}
 	account := mysql.Account{
 		AccountCode: accountCode,
 		Owner:       req.Owner,
@@ -404,19 +437,58 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 		CoinType:    int(req.CoinType),
 		CoinDesc:    "CNY",
 		State:       3,
-		AccountType: int(req.AccountType) + 1,
+		AccountType: accountType,
 		LastTxId:    accountCode, // 初始值等于AccountCode
 		CreateTime:  time.Now(),
 		UpdateTime:  time.Now(),
 	}
-	err := repository.CreateAccount(&account)
+	err = repository.CreateAccount(tx, &account)
 	if err != nil {
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			kelvins.ErrLogger.Errorf(ctx, "CreateAccount Rollback err: %v, account: %+v", err, account)
+		}
 		if strings.Contains(err.Error(), errcode.GetErrMsg(code.DBDuplicateEntry)) {
 			retCode = code.AccountExist
 			return
 		}
 		kelvins.ErrLogger.Errorf(ctx, "CreateAccount err: %v, account: %+v", err, account)
 		retCode = code.ErrorServer
+		return
+	}
+	// 转账记录
+	transaction := mysql.Transaction{
+		FromAccountCode: "outside",
+		FromBalance:     "0",
+		ToAccountCode:   req.Owner,
+		ToBalance:       req.Balance,
+		Amount:          req.Balance,
+		Meta:            "初始账户",
+		Scene:           "初始账户",
+		OpUid:           0,
+		OpIp:            "system",
+		TxId:            accountCode,
+		Fingerprint:     util.ParseTimeOfStr(time.Now().Unix()),
+		PayType:         0,
+		PayDesc:         "外部充值",
+		CreateTime:      time.Now(),
+		UpdateTime:      time.Now(),
+	}
+	err = repository.CreateTransaction(tx, &transaction)
+	if err != nil {
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %+v", err, transaction)
+		}
+		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %+v", err, transaction)
+		retCode = code.ErrorServer
+		return
+	}
+	err = tx.Commit()
+	if err != nil {
+		kelvins.ErrLogger.Errorf(ctx, "CreateAccount Commit err: %v", err)
+		retCode = code.ErrorServer
+		return
 	}
 	return
 }
