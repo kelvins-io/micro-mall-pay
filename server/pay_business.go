@@ -19,7 +19,6 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 	var result pay_business.TradePayResponse
 	result.Common = &pay_business.CommonResponse{
 		Code: pay_business.RetCode_SUCCESS,
-		Msg:  "ok",
 	}
 	txId, retCode := service.TradePay(ctx, req)
 	codeRsp := pay_business.RetCode_SUCCESS

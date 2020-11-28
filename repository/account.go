@@ -37,10 +37,11 @@ func FindAccount(sqlSelect string, ownerList []string, accountType, coinType int
 	return result, err
 }
 
-func GetAccountByTx(tx *xorm.Session, owner string, accountType, coinType int) (*mysql.Account, error) {
+func GetAccountByTx(tx *xorm.Session, sqlSelect string, owner string, accountType, coinType int) (*mysql.Account, error) {
 	var model mysql.Account
 	var err error
 	_, err = tx.Table(mysql.TableAccount).
+		Select(sqlSelect).
 		Where("owner = ?", owner).
 		Where("account_type = ?", accountType).
 		Where("coin_type = ?", coinType).

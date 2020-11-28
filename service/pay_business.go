@@ -152,7 +152,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		kelvins.ErrLogger.Errorf(ctx, "TradePay NewFromString err: %v, number: %v", err, userAccount.Balance)
 		return code.DecimalParseErr
 	}
-	merchantAccount, err := repository.GetAccountByTx(tx, req.EntryList[i].Merchant, args.AccountTypeCompany, int(req.CoinType))
+	merchantAccount, err := repository.GetAccountByTx(tx, sqlSelectCheckUserAccount, req.EntryList[i].Merchant, args.AccountTypeCompany, int(req.CoinType))
 	if err != nil {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
@@ -244,7 +244,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		}
 		return code.TransactionFailed
 	}
-	// 更新扣减了余额后的用户账户
+	// 更新扣减了余额后的用户账户（userAccount必须可修改）
 	userAccount.Balance = fromBalance.String() // 用户账户剩余金额
 	userAccount.LastTxId = lastTxId
 
@@ -300,8 +300,10 @@ func genTransactionFingerprint(transaction *mysql.Transaction) string {
 	return crypt.Md5Sign(params, appKeyTransaction)
 }
 
+const sqlSelectCheckUserAccount = "balance,account_code,owner,balance,last_tx_id,state"
+
 func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_business.TradePayRequest) (*mysql.Account, int) {
-	userAccount, err := repository.GetAccountByTx(tx, req.Account, args.AccountTypePerson, int(req.CoinType))
+	userAccount, err := repository.GetAccountByTx(tx, sqlSelectCheckUserAccount, req.Account, args.AccountTypePerson, int(req.CoinType))
 	if err != nil {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
@@ -369,20 +371,24 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 	}
 	defer conn.Close()
 	serve := users.NewUsersServiceClient(conn)
-	r := users.GetUserInfoRequest{
-		Uid: req.OpUid,
+	r := users.GetUserAccountIdRequest{
+		UidList: []int64{req.OpUid},
 	}
-	rsp, err := serve.GetUserInfo(ctx, &r)
+	rsp, err := serve.GetUserAccountId(ctx, &r)
 	if err != nil || rsp.Common.Code != users.RetCode_SUCCESS {
 		kelvins.ErrLogger.Errorf(ctx, "GetUserInfo %v,err: %v", serverName, err)
 		retCode = code.ErrorServer
 		return
 	}
-	if rsp.Info == nil || rsp.Info.AccountId == "" {
+	if rsp.Common.Code == users.RetCode_USER_NOT_EXIST {
 		retCode = code.UserNotExist
 		return
 	}
-	if rsp.Info.AccountId != req.Account {
+	if rsp.InfoList[0].AccountId == "" {
+		retCode = code.UserNotExist
+		return
+	}
+	if rsp.InfoList[0].AccountId != req.Account {
 		retCode = code.TradeOrderNotMatchUser
 		return
 	}
@@ -392,7 +398,7 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 		outTradeNoList[i] = req.EntryList[i].OutTradeNo
 	}
 	where := map[string]interface{}{
-		"user": rsp.Info.AccountId,
+		"user": rsp.InfoList[0].AccountId,
 	}
 	payRecordList, _, err := repository.GetPayRecordList("pay_state", where, outTradeNoList, nil, nil, 0, 0)
 	if err != nil {
