@@ -23,7 +23,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response",
+            "description": "An unexpected error response.",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -81,7 +81,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response",
+            "description": "An unexpected error response.",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -114,7 +114,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response",
+            "description": "An unexpected error response.",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -147,7 +147,7 @@
             }
           },
           "default": {
-            "description": "An unexpected error response",
+            "description": "An unexpected error response.",
             "schema": {
               "$ref": "#/definitions/runtimeError"
             }
@@ -161,6 +161,55 @@
             "schema": {
               "$ref": "#/definitions/pay_businessTradePayRequest"
             }
+          }
+        ],
+        "tags": [
+          "PayBusinessService"
+        ]
+      }
+    },
+    "/v1/trade/uuid": {
+      "get": {
+        "summary": "获取交易唯一ID",
+        "operationId": "PayBusinessService_GetTradeUUID",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pay_businessGetTradeUUIDResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "trade_type",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "PAY",
+              "CHARGE"
+            ],
+            "default": "PAY"
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "uid",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
           }
         ],
         "tags": [
@@ -186,6 +235,9 @@
           "$ref": "#/definitions/pay_businessCoinType"
         },
         "amount": {
+          "type": "string"
+        },
+        "out_trade_no": {
           "type": "string"
         },
         "op_meta": {
@@ -288,6 +340,17 @@
         }
       }
     },
+    "pay_businessGetTradeUUIDResponse": {
+      "type": "object",
+      "properties": {
+        "common": {
+          "$ref": "#/definitions/pay_businessCommonResponse"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      }
+    },
     "pay_businessOperationMeta": {
       "type": "object",
       "properties": {
@@ -334,7 +397,9 @@
         "TRADE_PAY_SUCCESS",
         "TRADE_PAY_EXPIRE",
         "TRADE_ORDER_NOT_MATCH_USER",
-        "USER_ACCOUNT_STATE_INVALID"
+        "USER_ACCOUNT_STATE_INVALID",
+        "USER_CHARGE_RECORD_EXIST",
+        "TRADE_UUID_EMPTY"
       ],
       "default": "SUCCESS"
     },
@@ -412,6 +477,14 @@
           "type": "string"
         }
       }
+    },
+    "pay_businessTradeType": {
+      "type": "string",
+      "enum": [
+        "PAY",
+        "CHARGE"
+      ],
+      "default": "PAY"
     },
     "protobufAny": {
       "type": "object",

@@ -24,3 +24,9 @@ func GetPayRecordList(selectSql string, where interface{}, outTradeNo, orderByAs
 	total, err := session.FindAndCount(&result)
 	return result, total, err
 }
+
+func FindPayRecordList(selectSql string, where interface{}) ([]mysql.PayRecord,error)  {
+	var result = make([]mysql.PayRecord, 0)
+	err :=  kelvins.XORM_DBEngine.Table(mysql.TablePayRecord).Select(selectSql).Where(where).Find(&result)
+	return result,err
+}

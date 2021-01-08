@@ -13,10 +13,39 @@ import (
 	"time"
 )
 
-const sqlSelectAccount = "balance,last_tx_id,owner,account_code,state"
+const (
+	sqlSelectAccount = "balance,last_tx_id,owner,account_code,state"
+	sqlSelectPayRecord = "out_trade_no,pay_state"
+)
 
 func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) (retCode int) {
 	retCode = code.Success
+	if len(req.OutTradeNo) ==0 {
+		retCode = code.TradeUUIDEmpty
+		return
+	}
+	// 1 根据外部uuid查找
+	wherePayRecord := map[string]interface{}{
+		"user":req.Owner,
+		"out_trade_no":req.OutTradeNo,
+	}
+	payRecordList,err := repository.FindPayRecordList(sqlSelectPayRecord,wherePayRecord)
+	if err != nil {
+		kelvins.ErrLogger.Errorf(ctx, "FindPayRecordList err: %v, wherePayRecord: %v", err, wherePayRecord)
+		retCode = code.ErrorServer
+		return
+	}
+	for i := 0;i<len(payRecordList);i++{
+		if payRecordList[i].PayState == 1 {
+			retCode = code.TradePayRun
+			return
+		}
+		if payRecordList[i].PayState == 3 {
+			retCode = code.UserChargeRecordExist
+			return
+		}
+	}
+	// 验证账户
 	accountList, err := repository.FindAccount(sqlSelectAccount, req.Owner, int(req.AccountType+1), int(req.CoinType))
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "FindAccount err: %v, owner: %v", err, req.Owner)

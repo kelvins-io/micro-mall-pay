@@ -24,6 +24,16 @@ import (
 
 func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId string, retCode int) {
 	retCode = code.Success
+	// 参数验证
+	if len(req.EntryList) == 0 {
+		return
+	}
+	for i := 0; i < len(req.EntryList); i++ {
+		if len(req.EntryList[i].OutTradeNo) == 0 {
+			retCode = code.TradeUUIDEmpty
+			return
+		}
+	}
 	// 支付状态检查
 	retCode = tradePayCheckState(ctx, req)
 	if retCode != code.Success {
@@ -98,7 +108,16 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 	return retCode
 }
 
-func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRequest, i int, tx *xorm.Session, userAccount *mysql.Account) int {
+func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRequest, i int, tx *xorm.Session, userAccount *mysql.Account) (retCode int) {
+	retCode = code.Success
+	defer func() {
+		if retCode != code.Success {
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				kelvins.ErrLogger.Errorf(ctx, "tradePayOne Rollback err: %v", errRollback)
+			}
+		}
+	}()
 	// 生成支付记录
 	payRecord := mysql.PayRecord{
 		TxId:        payId,
@@ -118,71 +137,47 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	err := repository.CreatePayRecord(tx, &payRecord)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "CreatePayRecord Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "CreatePayRecord err: %v, payRecord: %v", err, payRecord)
-		return code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	reqAmount, err := decimal.NewFromString(req.EntryList[i].Detail.Amount)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "tradePayOne NewFromString Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "tradePayOne NewFromString err: %v, amount: %v", err, req.EntryList[i].Detail.Amount)
-		return code.DecimalParseErr
+		retCode = code.DecimalParseErr
+		return
 	}
 	reduction, err := decimal.NewFromString(req.EntryList[i].Detail.Reduction)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "tradePayOne NewFromString Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "tradePayOne NewFromString err: %v, amount: %v", err, req.EntryList[i].Detail.Reduction)
-		return code.DecimalParseErr
+		retCode = code.DecimalParseErr
+		return
 	}
 	userBalance, err := decimal.NewFromString(userAccount.Balance)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "TradePay NewFromString Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "TradePay NewFromString err: %v, number: %v", err, userAccount.Balance)
-		return code.DecimalParseErr
+		retCode = code.DecimalParseErr
+		return
 	}
 	merchantAccount, err := repository.GetAccountByTx(tx, sqlSelectCheckUserAccount, req.EntryList[i].Merchant, args.AccountTypeCompany, int(req.CoinType))
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx err: %v, owner: %v", err, req.EntryList[i].Merchant)
-		return code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	if merchantAccount.Owner == "" {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
-		return code.MerchantAccountNotExist
+		retCode = code.MerchantAccountNotExist
+		return
 	}
 	if merchantAccount.State != 3 {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
-		return code.MerchantAccountStateLock
+		retCode = code.MerchantAccountStateLock
+		return
 	}
 	merchantBalance, err := decimal.NewFromString(merchantAccount.Balance)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx err: %v, owner: %v", err, merchantAccount.Balance)
-		return code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	// 生成交易流水
 	fromBalance := util.DecimalSub(userBalance, util.DecimalSub(reqAmount, reduction))
@@ -207,12 +202,9 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	transaction.Fingerprint = genTransactionFingerprint(&transaction)
 	err = repository.CreateTransaction(tx, &transaction)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %+v", err, transaction)
-		return code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	lastTxId := uuid.New().String()
 	// 扣减用余额，增加商余额
@@ -229,20 +221,14 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	rowsAffected, err := repository.ChangeAccount(tx, whereUserAccount, userAccountChange)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereUserAccount, userAccountChange)
-		return code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	// 没有符合条件的数据行，说明没有更新成功
 	if rowsAffected != 1 {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
-		}
-		return code.TransactionFailed
+		retCode = code.TransactionFailed
+		return
 	}
 	// 更新扣减了余额后的用户账户（userAccount必须可修改）
 	userAccount.Balance = fromBalance.String() // 用户账户剩余金额
@@ -262,23 +248,17 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	rowsAffected, err = repository.ChangeAccount(tx, whereMerchantAccount, merchantAccountChange)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereMerchantAccount, userAccountChange)
-		return code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	// 没有符合条件的数据行，说明没有更新成功
 	if rowsAffected != 1 {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
-		}
-		return code.TransactionFailed
+		retCode = code.TransactionFailed
+		return
 	}
 
-	return code.Success
+	return
 }
 
 // 生成交易指纹
@@ -302,62 +282,56 @@ func genTransactionFingerprint(transaction *mysql.Transaction) string {
 
 const sqlSelectCheckUserAccount = "balance,account_code,owner,balance,last_tx_id,state"
 
-func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_business.TradePayRequest) (*mysql.Account, int) {
-	userAccount, err := repository.GetAccountByTx(tx, sqlSelectCheckUserAccount, req.Account, args.AccountTypePerson, int(req.CoinType))
-	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
+func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_business.TradePayRequest) (userAccount *mysql.Account, retCode int) {
+	retCode = code.Success
+	defer func() {
+		if retCode != code.Success {
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				kelvins.ErrLogger.Errorf(ctx, "tradePayCheckUserAccount Rollback err: %v", errRollback)
+			}
 		}
+	}()
+
+	var err error
+	userAccount, err = repository.GetAccountByTx(tx, sqlSelectCheckUserAccount, req.Account, args.AccountTypePerson, int(req.CoinType))
+	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx err: %v, owner: %v", err, req.Account)
-		return userAccount, code.ErrorServer
+		retCode = code.ErrorServer
+		return
 	}
 	if userAccount.Owner == "" {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
-		return userAccount, code.UserAccountNotExist
+		retCode = code.UserAccountNotExist
+		return
 	}
 	if userAccount.State != 3 {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
-		return userAccount, code.UserAccountStateLock
+		retCode = code.UserAccountStateLock
+		return
 	}
 	// 检查用户账户余额
 	userBalance, err := decimal.NewFromString(userAccount.Balance)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx NewFromString Rollback err: %v", errRollback)
-		}
 		kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx NewFromString err: %v, number: %v", err, userAccount.Balance)
-		return userAccount, code.DecimalParseErr
+		retCode = code.DecimalParseErr
+		return
 	}
 	totalAmount, _ := decimal.NewFromString("0")
 	for i := 0; i < len(req.EntryList); i++ {
 		amount := req.EntryList[i].Detail.Amount
 		amountDecimal, err := decimal.NewFromString(amount)
 		if err != nil {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx NewFromString Rollback err: %v", errRollback)
-			}
 			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx NewFromString err: %v, amount: %v", err, amount)
-			return userAccount, code.DecimalParseErr
+			retCode = code.DecimalParseErr
+			return
 		}
 		totalAmount = util.DecimalAdd(totalAmount, amountDecimal)
 	}
 	if !util.DecimalGreaterThanOrEqual(userBalance, totalAmount) {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "GetAccountByTx Rollback err: %v", errRollback)
-		}
-		return userAccount, code.UserAccountNotEnough
+		retCode = code.UserAccountNotEnough
+		return
 	}
-	return userAccount, code.Success
+	retCode = code.Success
+	return
 }
 
 func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) (retCode int) {

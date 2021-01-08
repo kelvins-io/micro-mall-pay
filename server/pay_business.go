@@ -49,6 +49,8 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 			codeRsp = pay_business.RetCode_TRADE_PAY_RUN
 		case code.TradePaySuccess:
 			codeRsp = pay_business.RetCode_TRADE_PAY_SUCCESS
+		case code.TradeUUIDEmpty:
+			result.Common.Code = pay_business.RetCode_TRADE_UUID_EMPTY
 		case code.ErrorServer:
 			codeRsp = pay_business.RetCode_ERROR
 		}
@@ -103,6 +105,8 @@ func (p *PayServer) AccountCharge(ctx context.Context, req *pay_business.Account
 	retCode := service.AccountCharge(ctx, req)
 	if retCode != code.Success {
 		switch retCode {
+		case code.TradePayRun:
+			result.Common.Code = pay_business.RetCode_TRADE_PAY_RUN
 		case code.TransactionFailed:
 			result.Common.Code = pay_business.RetCode_TRANSACTION_FAILED
 		case code.UserAccountNotExist:
@@ -111,10 +115,27 @@ func (p *PayServer) AccountCharge(ctx context.Context, req *pay_business.Account
 			result.Common.Code = pay_business.RetCode_USER_ACCOUNT_STATE_LOCK
 		case code.UserAccountStateInvalid:
 			result.Common.Code = pay_business.RetCode_USER_ACCOUNT_STATE_INVALID
+		case code.TradeUUIDEmpty:
+			result.Common.Code = pay_business.RetCode_TRADE_UUID_EMPTY
 		default:
 			result.Common.Code = pay_business.RetCode_ERROR
 		}
 		return result, nil
 	}
 	return result, nil
+}
+
+func (p *PayServer)GetTradeUUID(ctx context.Context, req *pay_business.GetTradeUUIDRequest) (*pay_business.GetTradeUUIDResponse,error)  {
+	result := &pay_business.GetTradeUUIDResponse{
+		Common: &pay_business.CommonResponse{
+			Code: pay_business.RetCode_SUCCESS,
+			Msg:  "",
+		},
+	}
+	uuid,retCode := service.GetTradeUUID(ctx,req)
+	if retCode != code.Success {
+		result.Common.Code = pay_business.RetCode_ERROR
+	}
+	result.Uuid = uuid
+	return result,nil
 }
