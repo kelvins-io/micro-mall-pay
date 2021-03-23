@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/etc python3
 # -*- coding:utf-8 -*-
 import os
 import sys
@@ -64,7 +64,7 @@ def deploy():
         sys.exit(1)
     # 服务进程可以已经存在，需先kill调服务进程
     os.system("ps -ef | grep %s | grep -v setup.sh | grep -v grep | cut -c '9-15' | xargs kill 2>/dev/null" % project_name)
-    if os.system("nohup ./%s server &" % project_name) != 0:
+    if os.system("nohup ./%s internal &" % project_name) != 0:
         print("start process failed")
         sys.exit(1)
 

@@ -1942,7 +1942,7 @@ func (c *payBusinessServiceClient) GetTradeUUID(ctx context.Context, in *GetTrad
 	return out, nil
 }
 
-// PayBusinessServiceServer is the server API for PayBusinessService service.
+// PayBusinessServiceServer is the internal API for PayBusinessService service.
 type PayBusinessServiceServer interface {
 	// 统一收单支付
 	TradePay(context.Context, *TradePayRequest) (*TradePayResponse, error)

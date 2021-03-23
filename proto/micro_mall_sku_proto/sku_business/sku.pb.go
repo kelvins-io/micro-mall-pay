@@ -1736,7 +1736,7 @@ func (c *skuBusinessServiceClient) RestoreInventory(ctx context.Context, in *Res
 	return out, nil
 }
 
-// SkuBusinessServiceServer is the server API for SkuBusinessService service.
+// SkuBusinessServiceServer is the internal API for SkuBusinessService service.
 type SkuBusinessServiceServer interface {
 	// 上架商品
 	PutAwaySku(context.Context, *PutAwaySkuRequest) (*PutAwaySkuResponse, error)

@@ -1814,7 +1814,7 @@ func (c *orderBusinessServiceClient) GetOrderSku(ctx context.Context, in *GetOrd
 	return out, nil
 }
 
-// OrderBusinessServiceServer is the server API for OrderBusinessService service.
+// OrderBusinessServiceServer is the internal API for OrderBusinessService service.
 type OrderBusinessServiceServer interface {
 	// 创建订单
 	CreateOrder(context.Context, *CreateOrderRequest) (*CreateOrderResponse, error)
