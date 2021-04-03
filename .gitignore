@@ -12,3 +12,5 @@
 *.out
 logs/
 vendor/
+etc/app.ini
+micro-mall-pay
