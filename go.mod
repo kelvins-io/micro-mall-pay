@@ -3,8 +3,8 @@ module gitee.com/cristiane/micro-mall-pay
 go 1.13
 
 require (
-	gitee.com/kelvins-io/common v1.0.2
-	gitee.com/kelvins-io/kelvins v1.2.2
+	gitee.com/kelvins-io/common v1.0.4
+	gitee.com/kelvins-io/kelvins v1.2.7
 	gitee.com/kelvins-io/service-config v1.0.0 // indirect
 	github.com/RichardKnop/machinery v1.9.1
 	github.com/golang/protobuf v1.4.3
@@ -18,7 +18,7 @@ require (
 	go.elastic.co/apm/module/apmgorm v1.9.0 // indirect
 	go.elastic.co/apm/module/apmgrpc v1.9.0 // indirect
 	go.elastic.co/apm/module/apmredigo v1.9.0 // indirect
-	golang.org/x/net v0.0.0-20201016165138-7b1cca2348c0
+	golang.org/x/net v0.0.0-20201016165138-7b1cca2348c0 // indirect
 	google.golang.org/grpc v1.33.1
 	google.golang.org/protobuf v1.25.0
 	xorm.io/xorm v1.0.3
