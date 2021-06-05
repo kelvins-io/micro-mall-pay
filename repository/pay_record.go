@@ -11,10 +11,9 @@ func CreatePayRecord(tx *xorm.Session, model *mysql.PayRecord) (err error) {
 	return
 }
 
-func GetPayRecordList(selectSql string, where interface{}, outTradeNo, orderByAsc, orderByDesc []string, pageSize, pageNum int) ([]mysql.PayRecord, int64, error) {
+func GetPayRecordList(selectSql string, where interface{}, orderByAsc, orderByDesc []string, pageSize, pageNum int) ([]mysql.PayRecord, int64, error) {
 	var result = make([]mysql.PayRecord, 0)
 	session := kelvins.XORM_DBEngine.Table(mysql.TablePayRecord).Select(selectSql).
-		In("out_trade_no", outTradeNo).
 		Where(where).
 		Asc(orderByAsc...).
 		Desc(orderByDesc...)

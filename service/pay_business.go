@@ -372,9 +372,10 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 		outTradeNoList[i] = req.EntryList[i].OutTradeNo
 	}
 	where := map[string]interface{}{
-		"user": rsp.InfoList[0].AccountId,
+		"user":         rsp.InfoList[0].AccountId,
+		"out_trade_no": outTradeNoList,
 	}
-	payRecordList, _, err := repository.GetPayRecordList("pay_state", where, outTradeNoList, nil, nil, 0, 0)
+	payRecordList, _, err := repository.GetPayRecordList("pay_state", where, nil, nil, 0, 0)
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "GetPayRecordList err: %v, outTradeNoList: %v", err, outTradeNoList)
 		retCode = code.ErrorServer
