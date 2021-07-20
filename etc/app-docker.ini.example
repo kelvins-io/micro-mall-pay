@@ -1,0 +1,43 @@
+[kelvins-server]
+EndPoint = 8080
+IsRecordCallResponse = true
+
+[kelvins-logger]
+RootPath = "./logs"
+Level = "debug"
+
+[kelvins-mysql]
+Host = "mysql5_7:3306"
+UserName = "root"
+Password = "micro-mall"
+DBName = "micro_mall_pay"
+Charset = "utf8mb4"
+PoolNum =  10
+MaxIdleConns = 5
+ConnMaxLifeSecond = 3600
+MultiStatements = true
+ParseTime = true
+
+[kelvins-redis]
+Host = "redis:6379"
+Password = "oyuioyiuoyui"
+DB = 1
+PoolNum = 10
+
+[kelvins-queue-amqp]
+Broker = "amqp://root:micro-mall@rabbitmq:5672/micro-mall"
+DefaultQueue = "trade_pay_notice"
+ResultBackend = "redis://oyuioyiuoyui@redis:6379/10"
+ResultsExpireIn = 36000
+Exchange = "trade_pay_notice"
+ExchangeType = "direct"
+BindingKey = "trade_pay_notice"
+PrefetchCount = 5
+TaskRetryCount = 3
+TaskRetryTimeout = 3600
+
+[email-config]
+User = "xxxx@qq.com"
+Password = "xxx"
+Host = "smtp.qq.com"
+Port = "465"
