@@ -8,7 +8,6 @@ import (
 	"gitee.com/cristiane/micro-mall-pay/pkg/code"
 	"gitee.com/cristiane/micro-mall-pay/pkg/util"
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_pay_proto/pay_business"
-	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_users_proto/users"
 	"gitee.com/cristiane/micro-mall-pay/repository"
 	"gitee.com/cristiane/micro-mall-pay/vars"
 	"gitee.com/kelvins-io/common/crypt"
@@ -108,6 +107,13 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 	return retCode
 }
 
+func decimalZeroCovert(amount string) string  {
+	if amount == "" {
+		return "0"
+	}
+	return amount
+}
+
 func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRequest, i int, tx *xorm.Session, userAccount *mysql.Account) (retCode int) {
 	retCode = code.Success
 	defer func() {
@@ -119,10 +125,11 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		}
 	}()
 	// 生成支付记录
+	req.EntryList[i].Detail.Reduction = decimalZeroCovert(req.EntryList[i].Detail.Reduction)
+	req.EntryList[i].Detail.Amount = decimalZeroCovert(req.EntryList[i].Detail.Amount)
 	payRecord := mysql.PayRecord{
 		TxId:        payId,
 		OutTradeNo:  req.EntryList[i].OutTradeNo,
-		NotifyUrl:   req.EntryList[i].NotifyUrl,
 		Description: req.EntryList[i].Description,
 		Merchant:    req.EntryList[i].Merchant,
 		Attach:      req.EntryList[i].Attach,
@@ -336,43 +343,13 @@ func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_bu
 
 func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) (retCode int) {
 	retCode = code.Success
-	serverName := args.RpcServiceMicroMallUsers
-	conn, err := util.GetGrpcClient(serverName)
-	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "GetGrpcClient %v,err: %v", serverName, err)
-		retCode = code.ErrorServer
-		return
-	}
-	defer conn.Close()
-	serve := users.NewUsersServiceClient(conn)
-	r := users.GetUserAccountIdRequest{
-		UidList: []int64{req.OpUid},
-	}
-	rsp, err := serve.GetUserAccountId(ctx, &r)
-	if err != nil || rsp.Common.Code != users.RetCode_SUCCESS {
-		kelvins.ErrLogger.Errorf(ctx, "GetUserInfo %v,err: %v", serverName, err)
-		retCode = code.ErrorServer
-		return
-	}
-	if rsp.Common.Code == users.RetCode_USER_NOT_EXIST {
-		retCode = code.UserNotExist
-		return
-	}
-	if rsp.InfoList[0].AccountId == "" {
-		retCode = code.UserNotExist
-		return
-	}
-	if rsp.InfoList[0].AccountId != req.Account {
-		retCode = code.TradeOrderNotMatchUser
-		return
-	}
 	// 参数验证
 	outTradeNoList := make([]string, len(req.EntryList))
 	for i := 0; i < len(req.EntryList); i++ {
 		outTradeNoList[i] = req.EntryList[i].OutTradeNo
 	}
 	where := map[string]interface{}{
-		"user":         rsp.InfoList[0].AccountId,
+		"user":         req.Account,
 		"out_trade_no": outTradeNoList,
 	}
 	payRecordList, _, err := repository.GetPayRecordList("pay_state", where, nil, nil, 0, 0)

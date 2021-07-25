@@ -5,7 +5,6 @@ import (
 	"gitee.com/cristiane/micro-mall-pay/pkg/code"
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_pay_proto/pay_business"
 	"gitee.com/cristiane/micro-mall-pay/service"
-	"gitee.com/kelvins-io/common/errcode"
 )
 
 type PayServer struct {
@@ -22,13 +21,10 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 	}
 	txId, retCode := service.TradePay(ctx, req)
 	codeRsp := pay_business.RetCode_SUCCESS
-	msgRsp := errcode.GetErrMsg(retCode)
 	if retCode != code.Success {
 		switch retCode {
 		case code.TradeOrderNotMatchUser:
 			codeRsp = pay_business.RetCode_TRADE_ORDER_NOT_MATCH_USER
-		case code.UserNotExist:
-			codeRsp = pay_business.RetCode_USER_NOT_EXIST
 		case code.UserAccountNotExist:
 			codeRsp = pay_business.RetCode_USER_ACCOUNT_NOT_EXIST
 		case code.UserAccountNotEnough:
@@ -56,7 +52,6 @@ func (p *PayServer) TradePay(ctx context.Context, req *pay_business.TradePayRequ
 		}
 	}
 	result.Common.Code = codeRsp
-	result.Common.Msg = msgRsp
 	result.TradeId = txId
 
 	return &result, nil
@@ -70,7 +65,6 @@ func (p *PayServer) CreateAccount(ctx context.Context, req *pay_business.CreateA
 	}
 	accountCode, retCode := service.CreateAccount(ctx, req)
 	codeRsp := pay_business.RetCode_SUCCESS
-	msgRsp := errcode.GetErrMsg(retCode)
 	if retCode != code.Success {
 		switch retCode {
 		case code.AccountExist:
@@ -80,7 +74,6 @@ func (p *PayServer) CreateAccount(ctx context.Context, req *pay_business.CreateA
 		}
 	}
 	result.Common.Code = codeRsp
-	result.Common.Msg = msgRsp
 	result.AccountCode = accountCode
 	return &result, nil
 }
@@ -125,17 +118,17 @@ func (p *PayServer) AccountCharge(ctx context.Context, req *pay_business.Account
 	return result, nil
 }
 
-func (p *PayServer)GetTradeUUID(ctx context.Context, req *pay_business.GetTradeUUIDRequest) (*pay_business.GetTradeUUIDResponse,error)  {
+func (p *PayServer) GetTradeUUID(ctx context.Context, req *pay_business.GetTradeUUIDRequest) (*pay_business.GetTradeUUIDResponse, error) {
 	result := &pay_business.GetTradeUUIDResponse{
 		Common: &pay_business.CommonResponse{
 			Code: pay_business.RetCode_SUCCESS,
 			Msg:  "",
 		},
 	}
-	uuid,retCode := service.GetTradeUUID(ctx,req)
+	uuid, retCode := service.GetTradeUUID(ctx, req)
 	if retCode != code.Success {
 		result.Common.Code = pay_business.RetCode_ERROR
 	}
 	result.Uuid = uuid
-	return result,nil
+	return result, nil
 }

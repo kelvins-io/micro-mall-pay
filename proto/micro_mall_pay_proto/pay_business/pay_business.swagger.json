@@ -420,12 +420,6 @@
         "out_trade_no": {
           "type": "string"
         },
-        "time_expire": {
-          "type": "string"
-        },
-        "notify_url": {
-          "type": "string"
-        },
         "description": {
           "type": "string"
         },

@@ -14,28 +14,28 @@ import (
 )
 
 const (
-	sqlSelectAccount = "balance,last_tx_id,owner,account_code,state"
+	sqlSelectAccount   = "balance,last_tx_id,owner,account_code,state"
 	sqlSelectPayRecord = "out_trade_no,pay_state"
 )
 
 func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) (retCode int) {
 	retCode = code.Success
-	if len(req.OutTradeNo) ==0 {
+	if len(req.OutTradeNo) == 0 {
 		retCode = code.TradeUUIDEmpty
 		return
 	}
 	// 1 根据外部uuid查找
 	wherePayRecord := map[string]interface{}{
-		"user":req.Owner,
-		"out_trade_no":req.OutTradeNo,
+		"user":         req.Owner,
+		"out_trade_no": req.OutTradeNo,
 	}
-	payRecordList,err := repository.FindPayRecordList(sqlSelectPayRecord,wherePayRecord)
+	payRecordList, err := repository.FindPayRecordList(sqlSelectPayRecord, wherePayRecord)
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "FindPayRecordList err: %v, wherePayRecord: %v", err, wherePayRecord)
 		retCode = code.ErrorServer
 		return
 	}
-	for i := 0;i<len(payRecordList);i++{
+	for i := 0; i < len(payRecordList); i++ {
 		if payRecordList[i].PayState == 1 {
 			retCode = code.TradePayRun
 			return
@@ -88,6 +88,8 @@ func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) 
 			retCode = code.UserAccountNotExist
 			return
 		}
+		account.Balance = decimalZeroCovert(account.Balance)
+		req.Amount = decimalZeroCovert(req.Amount)
 		transaction := mysql.Transaction{
 			FromAccountCode: "outside",
 			FromBalance:     "0",
