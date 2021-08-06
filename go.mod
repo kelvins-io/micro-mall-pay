@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	gitee.com/kelvins-io/common v1.0.4
-	gitee.com/kelvins-io/kelvins v1.3.0
+	gitee.com/kelvins-io/kelvins v1.4.0
 	gitee.com/kelvins-io/service-config v1.0.0 // indirect
 	github.com/RichardKnop/machinery v1.9.1
 	github.com/golang/protobuf v1.4.3
