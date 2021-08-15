@@ -1,10 +1,14 @@
 [kelvins-server]
-EndPoint = 8080
 IsRecordCallResponse = true
+Environment = "dev"
 
 [kelvins-logger]
 RootPath = "./logs"
 Level = "debug"
+
+[kelvins-auth]
+Token = "c9VW6ForlmzdeDkZE2i8"
+TransportSecurity = false
 
 [kelvins-mysql]
 Host = "mysql5_7:3306"
