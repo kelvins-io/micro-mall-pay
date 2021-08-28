@@ -100,9 +100,9 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 	}
 	taskUUID, retCode := pushSer.PushMessage(ctx, businessMsg)
 	if retCode != code.Success {
-		kelvins.ErrLogger.Errorf(ctx, "trade pay businessMsg: %+v  notice send err: ", businessMsg, errcode.GetErrMsg(retCode))
+		kelvins.ErrLogger.Errorf(ctx, "trade pay businessMsg: %v  notice send err: ", json.MarshalToStringNoError(businessMsg), errcode.GetErrMsg(retCode))
 	} else {
-		kelvins.BusinessLogger.Infof(ctx, "trade pay businessMsg businessMsg: %+v  taskUUID :%v", businessMsg, taskUUID)
+		kelvins.BusinessLogger.Infof(ctx, "trade pay businessMsg businessMsg: %v  taskUUID :%v", json.MarshalToStringNoError(businessMsg), taskUUID)
 	}
 	return retCode
 }
@@ -144,7 +144,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	err := repository.CreatePayRecord(tx, &payRecord)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "CreatePayRecord err: %v, payRecord: %v", err, payRecord)
+		kelvins.ErrLogger.Errorf(ctx, "CreatePayRecord err: %v, payRecord: %v", err, json.MarshalToStringNoError(payRecord))
 		retCode = code.ErrorServer
 		return
 	}
@@ -209,7 +209,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	transaction.Fingerprint = genTransactionFingerprint(&transaction)
 	err = repository.CreateTransaction(tx, &transaction)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %+v", err, transaction)
+		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
 		retCode = code.ErrorServer
 		return
 	}
@@ -228,7 +228,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	rowsAffected, err := repository.ChangeAccount(tx, whereUserAccount, userAccountChange)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereUserAccount, userAccountChange)
+		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %v, userAccountChange: %v", err, json.MarshalToStringNoError(whereUserAccount), json.MarshalToStringNoError(userAccountChange))
 		retCode = code.ErrorServer
 		return
 	}
@@ -255,7 +255,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	rowsAffected, err = repository.ChangeAccount(tx, whereMerchantAccount, merchantAccountChange)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %+v, userAccountChange: %+v", err, whereMerchantAccount, userAccountChange)
+		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %v, userAccountChange: %v", err, json.MarshalToStringNoError(whereMerchantAccount), json.MarshalToStringNoError(userAccountChange))
 		retCode = code.ErrorServer
 		return
 	}
@@ -354,7 +354,7 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 	}
 	payRecordList, _, err := repository.GetPayRecordList("pay_state", where, nil, nil, 0, 0)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "GetPayRecordList err: %v, outTradeNoList: %v", err, outTradeNoList)
+		kelvins.ErrLogger.Errorf(ctx, "GetPayRecordList err: %v, outTradeNoList: %v", err, json.MarshalToStringNoError(outTradeNoList))
 		retCode = code.ErrorServer
 		return
 	}
@@ -415,9 +415,9 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 	if err != nil {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %+v", err, transaction)
+			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
 		}
-		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %+v", err, transaction)
+		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
 		retCode = code.ErrorServer
 		return
 	}
@@ -438,13 +438,13 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 	if err != nil {
 		errRollback := tx.Rollback()
 		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "CreateAccount Rollback err: %v, account: %+v", err, account)
+			kelvins.ErrLogger.Errorf(ctx, "CreateAccount Rollback err: %v, account: %v", err, json.MarshalToStringNoError(account))
 		}
 		if strings.Contains(err.Error(), errcode.GetErrMsg(code.DBDuplicateEntry)) {
 			retCode = code.AccountExist
 			return
 		}
-		kelvins.ErrLogger.Errorf(ctx, "CreateAccount err: %v, account: %+v", err, account)
+		kelvins.ErrLogger.Errorf(ctx, "CreateAccount err: %v, account: %v", err, json.MarshalToStringNoError(account))
 		retCode = code.ErrorServer
 		return
 	}

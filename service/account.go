@@ -7,6 +7,7 @@ import (
 	"gitee.com/cristiane/micro-mall-pay/pkg/util"
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_pay_proto/pay_business"
 	"gitee.com/cristiane/micro-mall-pay/repository"
+	"gitee.com/kelvins-io/common/json"
 	"gitee.com/kelvins-io/kelvins"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
@@ -112,9 +113,9 @@ func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) 
 		if err != nil {
 			errRollback := tx.Rollback()
 			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %+v", errRollback, transaction)
+				kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %v", errRollback, json.MarshalToStringNoError(transaction))
 			}
-			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %+v", err, transaction)
+			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
 			retCode = code.ErrorServer
 			return
 		}
@@ -156,7 +157,7 @@ func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) 
 			if errRollback != nil {
 				kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
 			}
-			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, where: %+v, maps: %+v", err, updateAccountWhere, updateAccountMaps)
+			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, where: %v, maps: %v", err, json.MarshalToStringNoError(updateAccountWhere), json.MarshalToStringNoError(updateAccountMaps))
 			return code.ErrorServer
 		}
 		// 没有符合条件的数据行，说明没有更新成功

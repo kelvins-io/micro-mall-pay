@@ -1,3 +1,4 @@
+echo 当前分支
 git branch
 
 echo 拉取依赖
@@ -10,4 +11,4 @@ cp -n ./etc/app.ini.example ./etc/app.ini
 mkdir -p logs
 
 echo 开始运行micro-mall-pay
-./micro-mall-pay
+./micro-mall-pay -s start
