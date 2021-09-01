@@ -3,8 +3,8 @@ module gitee.com/cristiane/micro-mall-pay
 go 1.13
 
 require (
-	gitee.com/kelvins-io/common v1.1.3
-	gitee.com/kelvins-io/kelvins v1.5.3
+	gitee.com/kelvins-io/common v1.1.4
+	gitee.com/kelvins-io/kelvins v1.5.4
 	github.com/RichardKnop/machinery v1.10.6
 	github.com/golang/protobuf v1.5.2
 	github.com/gomodule/redigo v2.0.0+incompatible
