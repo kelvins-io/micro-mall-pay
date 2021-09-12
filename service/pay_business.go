@@ -9,7 +9,6 @@ import (
 	"gitee.com/cristiane/micro-mall-pay/pkg/util"
 	"gitee.com/cristiane/micro-mall-pay/proto/micro_mall_pay_proto/pay_business"
 	"gitee.com/cristiane/micro-mall-pay/repository"
-	"gitee.com/cristiane/micro-mall-pay/vars"
 	"gitee.com/kelvins-io/common/crypt"
 	"gitee.com/kelvins-io/common/errcode"
 	"gitee.com/kelvins-io/common/json"
@@ -81,7 +80,7 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 
 func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, payId string) int {
 	// 触发支付消息
-	pushSer := NewPushNoticeService(vars.TradePayQueueServer, PushMsgTag{
+	pushSer := NewPushNoticeService(kelvins.QueueServerAMQP, PushMsgTag{
 		DeliveryTag:    args.TaskNameTradePayNotice,
 		DeliveryErrTag: args.TaskNameTradePayNoticeErr,
 		RetryCount:     kelvins.QueueAMQPSetting.TaskRetryCount,
