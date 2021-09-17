@@ -20,7 +20,6 @@ g2cache缓存库支持（两级缓存）：https://gitee.com/kelvins-io/g2cache
 配置参考
 ```toml
 [kelvins-server]
-IsRecordCallResponse = true
 Environment = "dev"
 
 [kelvins-logger]

@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-
 func GetGrpcClient(ctx context.Context, serverName string) (*grpc.ClientConn, error) {
 	client, err := client_conn.NewConnClient(serverName)
 	if err != nil {

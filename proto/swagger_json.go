@@ -74,10 +74,11 @@ func AssetNames() []string {
 
 // _bindata is a table, holding each asset generator, mapped to its name.
 var _bindata = map[string]func() ([]byte, error){
-	"proto/.DS_Store": proto_ds_store,
+	"proto/.DS_Store":                    proto_ds_store,
 	"proto/micro_mall_pay_proto/LICENSE": proto_micro_mall_pay_proto_license,
 	"proto/micro_mall_pay_proto/pay_business/pay_business.swagger.json": proto_micro_mall_pay_proto_pay_business_pay_business_swagger_json,
 }
+
 // AssetDir returns the file names below a certain
 // directory embedded in the file by go-bindata.
 // For example if you run go-bindata on data/... and data contains the
@@ -114,19 +115,17 @@ func AssetDir(name string) ([]string, error) {
 }
 
 type _bintree_t struct {
-	Func func() ([]byte, error)
+	Func     func() ([]byte, error)
 	Children map[string]*_bintree_t
 }
+
 var _bintree = &_bintree_t{nil, map[string]*_bintree_t{
 	"proto": &_bintree_t{nil, map[string]*_bintree_t{
-		".DS_Store": &_bintree_t{proto_ds_store, map[string]*_bintree_t{
-		}},
+		".DS_Store": &_bintree_t{proto_ds_store, map[string]*_bintree_t{}},
 		"micro_mall_pay_proto": &_bintree_t{nil, map[string]*_bintree_t{
-			"LICENSE": &_bintree_t{proto_micro_mall_pay_proto_license, map[string]*_bintree_t{
-			}},
+			"LICENSE": &_bintree_t{proto_micro_mall_pay_proto_license, map[string]*_bintree_t{}},
 			"pay_business": &_bintree_t{nil, map[string]*_bintree_t{
-				"pay_business.swagger.json": &_bintree_t{proto_micro_mall_pay_proto_pay_business_pay_business_swagger_json, map[string]*_bintree_t{
-				}},
+				"pay_business.swagger.json": &_bintree_t{proto_micro_mall_pay_proto_pay_business_pay_business_swagger_json, map[string]*_bintree_t{}},
 			}},
 		}},
 	}},

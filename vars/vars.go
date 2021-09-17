@@ -1,5 +1,5 @@
 package vars
 
 var (
-	EmailConfigSetting  *EmailConfigSettingS
+	EmailConfigSetting *EmailConfigSettingS
 )

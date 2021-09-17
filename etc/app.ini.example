@@ -1,14 +1,16 @@
 [kelvins-server]
-IsRecordCallResponse = true
 Environment = "dev"
 
 [kelvins-logger]
 RootPath = "./logs"
 Level = "debug"
 
-[kelvins-auth]
+[kelvins-rpc-auth]
 Token = "c9VW6ForlmzdeDkZE2i8"
 TransportSecurity = false
+
+[kelvins-rpc-server]
+NumServerWorkers = 6
 
 [kelvins-mysql]
 Host = "127.0.0.1:3306"

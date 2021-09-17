@@ -106,7 +106,7 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 	return retCode
 }
 
-func decimalZeroCovert(amount string) string  {
+func decimalZeroCovert(amount string) string {
 	if amount == "" {
 		return "0"
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetTradeUUID(ctx context.Context, req *pay_business.GetTradeUUIDRequest) (tradeUUID string, retCode int)  {
+func GetTradeUUID(ctx context.Context, req *pay_business.GetTradeUUIDRequest) (tradeUUID string, retCode int) {
 	tradeUUID = uuid.New().String()
 	retCode = code.Success
 	return
