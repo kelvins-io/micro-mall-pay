@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	gitee.com/kelvins-io/common v1.1.5
-	gitee.com/kelvins-io/kelvins v1.5.10
+	gitee.com/kelvins-io/kelvins v1.5.11
 	github.com/RichardKnop/machinery v1.10.6
 	github.com/golang/protobuf v1.5.2
 	github.com/gomodule/redigo v2.0.0+incompatible

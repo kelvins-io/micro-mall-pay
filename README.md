@@ -29,6 +29,7 @@ Level = "debug"
 [kelvins-auth]
 Token = "c9VW6ForlmzdeDkZE2i8"
 TransportSecurity = false
+ExpireSecond = 100
 
 [kelvins-mysql]
 Host = "127.0.0.1:3306"
