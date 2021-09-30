@@ -5,13 +5,22 @@ Environment = "dev"
 RootPath = "./logs"
 Level = "debug"
 
+[kelvins-http-server]
+Network = "tcp"
+ReadTimeout = 30
+WriteTimeout = 30
+IdleTimeout = 30
+
+[kelvins-rpc-rate-limit]
+MaxConcurrent = 0
+
 [kelvins-rpc-auth]
 Token = "c9VW6ForlmzdeDkZE2i8"
 TransportSecurity = false
 ExpireSecond = 100
 
 [kelvins-rpc-server]
-NumServerWorkers = 6
+NumServerWorkers = 50
 
 [kelvins-mysql]
 Host = "mysql5_7:3306"
