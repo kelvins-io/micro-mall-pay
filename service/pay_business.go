@@ -90,7 +90,7 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 		Type: args.TradePayEventTypeCreate,
 		Tag:  args.GetMsg(args.TradePayEventTypeCreate),
 		UUID: util.GetUUID(),
-		Msg: json.MarshalToStringNoError(args.TradePayNotice{
+		Content: json.MarshalToStringNoError(args.TradePayNotice{
 			Uid:    req.OpUid,
 			Time:   util.ParseTimeOfStr(time.Now().Unix()),
 			PayId:  payId,
