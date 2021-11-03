@@ -67,9 +67,11 @@ func (p *PayServer) CreateAccount(ctx context.Context, req *pay_business.CreateA
 	codeRsp := pay_business.RetCode_SUCCESS
 	if retCode != code.Success {
 		switch retCode {
+		case code.TransactionFailed:
+			codeRsp = pay_business.RetCode_TRANSACTION_FAILED
 		case code.AccountExist:
 			codeRsp = pay_business.RetCode_ACCOUNT_EXIST
-		case code.ErrorServer:
+		default:
 			codeRsp = pay_business.RetCode_ERROR
 		}
 	}

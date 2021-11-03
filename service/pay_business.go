@@ -22,21 +22,12 @@ import (
 
 func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId string, retCode int) {
 	retCode = code.Success
-	// 参数验证
-	if len(req.EntryList) == 0 {
-		return
-	}
-	for i := 0; i < len(req.EntryList); i++ {
-		if len(req.EntryList[i].OutTradeNo) == 0 {
-			retCode = code.TradeUUIDEmpty
-			return
-		}
-	}
-	// 支付状态检查
-	retCode = tradePayCheckState(ctx, req)
+	// 验证
+	retCode = tradePayValidate(ctx, req)
 	if retCode != code.Success {
 		return
 	}
+
 	// 长事务，多次扣减用户账户在一个事务中完成
 	tx := kelvins.XORM_DBEngine.NewSession()
 	err := tx.Begin()
@@ -45,6 +36,15 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 		retCode = code.ErrorServer
 		return
 	}
+	defer func() {
+		if retCode != code.Success {
+			err := tx.Rollback()
+			if err != nil {
+				kelvins.ErrLogger.Errorf(ctx, "TradePay Rollback err: %v", err)
+				return
+			}
+		}
+	}()
 	// 检查用户账户余额
 	userAccount, retCode := tradePayCheckUserAccount(ctx, tx, req)
 	if retCode != code.Success {
@@ -62,19 +62,37 @@ func TradePay(ctx context.Context, req *pay_business.TradePayRequest) (payId str
 	// 触发支付事件通知
 	retCode = tradeEventNotice(ctx, req, payId)
 	if retCode != code.Success {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "TradePay Rollback err: %v", errRollback)
-		}
-		return
-	}
-	err = tx.Commit()
-	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "TradePay Commit err: %v", err)
-		retCode = code.ErrorServer
 		return
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		kelvins.ErrLogger.Errorf(ctx, "TradePay Commit err: %v", err)
+		retCode = code.TransactionFailed
+		return
+	}
+
+	return
+}
+
+func tradePayValidate(ctx context.Context, req *pay_business.TradePayRequest) (retCode int) {
+	retCode = code.Success
+	// 参数验证
+	if len(req.EntryList) == 0 {
+		retCode = code.TradeUUIDEmpty
+		return
+	}
+	for i := 0; i < len(req.EntryList); i++ {
+		if len(req.EntryList[i].OutTradeNo) == 0 {
+			retCode = code.TradeUUIDEmpty
+			return
+		}
+	}
+	// 支付状态检查
+	retCode = tradePayCheckState(ctx, req)
+	if retCode != code.Success {
+		return
+	}
 	return
 }
 
@@ -97,11 +115,9 @@ func tradeEventNotice(ctx context.Context, req *pay_business.TradePayRequest, pa
 			TxCode: req.OutTxCode, // 单次交易号（可能关联多个订单）
 		}),
 	}
-	taskUUID, retCode := pushSer.PushMessage(ctx, businessMsg)
+	_, retCode := pushSer.PushMessage(ctx, businessMsg)
 	if retCode != code.Success {
 		kelvins.ErrLogger.Errorf(ctx, "trade pay businessMsg: %v  notice send err: ", json.MarshalToStringNoError(businessMsg), errcode.GetErrMsg(retCode))
-	} else {
-		kelvins.BusinessLogger.Infof(ctx, "trade pay businessMsg businessMsg: %v  taskUUID :%v", json.MarshalToStringNoError(businessMsg), taskUUID)
 	}
 	return retCode
 }
@@ -115,14 +131,6 @@ func decimalZeroCovert(amount string) string {
 
 func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRequest, i int, tx *xorm.Session, userAccount *mysql.Account) (retCode int) {
 	retCode = code.Success
-	defer func() {
-		if retCode != code.Success {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "tradePayOne Rollback err: %v", errRollback)
-			}
-		}
-	}()
 	// 生成支付记录
 	req.EntryList[i].Detail.Reduction = decimalZeroCovert(req.EntryList[i].Detail.Reduction)
 	req.EntryList[i].Detail.Amount = decimalZeroCovert(req.EntryList[i].Detail.Amount)
@@ -201,7 +209,7 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 		TxId:            payId,
 		Fingerprint:     "",
 		PayType:         0,
-		PayDesc:         "交易支付",
+		PayDesc:         req.EntryList[i].GetAttach(),
 		CreateTime:      time.Now(),
 		UpdateTime:      time.Now(),
 	}
@@ -227,7 +235,8 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	rowsAffected, err := repository.ChangeAccount(tx, whereUserAccount, userAccountChange)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %v, userAccountChange: %v", err, json.MarshalToStringNoError(whereUserAccount), json.MarshalToStringNoError(userAccountChange))
+		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %v, userAccountChange: %v",
+			err, json.MarshalToStringNoError(whereUserAccount), json.MarshalToStringNoError(userAccountChange))
 		retCode = code.ErrorServer
 		return
 	}
@@ -254,7 +263,8 @@ func tradePayOne(ctx context.Context, payId string, req *pay_business.TradePayRe
 	}
 	rowsAffected, err = repository.ChangeAccount(tx, whereMerchantAccount, merchantAccountChange)
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %v, userAccountChange: %v", err, json.MarshalToStringNoError(whereMerchantAccount), json.MarshalToStringNoError(userAccountChange))
+		kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, userAccountQ: %v, userAccountChange: %v",
+			err, json.MarshalToStringNoError(whereMerchantAccount), json.MarshalToStringNoError(userAccountChange))
 		retCode = code.ErrorServer
 		return
 	}
@@ -290,15 +300,6 @@ const sqlSelectCheckUserAccount = "balance,account_code,owner,balance,last_tx_id
 
 func tradePayCheckUserAccount(ctx context.Context, tx *xorm.Session, req *pay_business.TradePayRequest) (userAccount *mysql.Account, retCode int) {
 	retCode = code.Success
-	defer func() {
-		if retCode != code.Success {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "tradePayCheckUserAccount Rollback err: %v", errRollback)
-			}
-		}
-	}()
-
 	var err error
 	userAccount, err = repository.GetAccountByTx(tx, sqlSelectCheckUserAccount, req.Account, args.AccountTypePerson, int(req.CoinType))
 	if err != nil {
@@ -370,6 +371,35 @@ func tradePayCheckState(ctx context.Context, req *pay_business.TradePayRequest) 
 	return
 }
 
+func tradePayUpdateState(ctx context.Context, tx *xorm.Session, req *pay_business.TradePayRequest, payState int) (retCode int) {
+	retCode = code.Success
+	if len(req.EntryList) == 0 {
+		return
+	}
+	outTradeNoList := make([]string, len(req.EntryList))
+	for i := 0; i < len(req.EntryList); i++ {
+		outTradeNoList[i] = req.EntryList[i].OutTradeNo
+	}
+	where := map[string]interface{}{
+		"user":         req.Account,
+		"out_trade_no": outTradeNoList,
+	}
+	maps := map[string]interface{}{
+		"pay_state": payState,
+	}
+	rowsAffected, err := repository.UpdatePayRecord(tx, where, maps)
+	if err != nil {
+		retCode = code.ErrorServer
+		kelvins.ErrLogger.Errorf(ctx, "UpdatePayRecord err: %v, where: %v, maps: %v", err, where, maps)
+		return
+	}
+	if rowsAffected != int64(len(outTradeNoList)) {
+		retCode = code.TransactionFailed
+		return
+	}
+	return
+}
+
 func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) (accountCode string, retCode int) {
 	retCode = code.Success
 	accountType := int(req.AccountType) + 1
@@ -387,10 +417,19 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 	tx := kelvins.XORM_DBEngine.NewSession()
 	err = tx.Begin()
 	if err != nil {
-		kelvins.ErrLogger.Errorf(ctx, "CreateAccount err: %v", err)
+		kelvins.ErrLogger.Errorf(ctx, "CreateAccount Begin err: %v", err)
 		retCode = code.ErrorServer
 		return
 	}
+	defer func() {
+		if retCode != code.Success {
+			err := tx.Rollback()
+			if err != nil {
+				kelvins.ErrLogger.Errorf(ctx, "CreateAccount Rollback err: %v", err)
+				return
+			}
+		}
+	}()
 	// 转账记录
 	transaction := mysql.Transaction{
 		FromAccountCode: "outside",
@@ -412,10 +451,6 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 	transaction.Fingerprint = genTransactionFingerprint(&transaction)
 	err = repository.CreateTransaction(tx, &transaction)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
-		}
 		kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
 		retCode = code.ErrorServer
 		return
@@ -435,10 +470,6 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 	}
 	err = repository.CreateAccount(tx, &account)
 	if err != nil {
-		errRollback := tx.Rollback()
-		if errRollback != nil {
-			kelvins.ErrLogger.Errorf(ctx, "CreateAccount Rollback err: %v, account: %v", err, json.MarshalToStringNoError(account))
-		}
 		if strings.Contains(err.Error(), errcode.GetErrMsg(code.DBDuplicateEntry)) {
 			retCode = code.AccountExist
 			return
@@ -450,7 +481,7 @@ func CreateAccount(ctx context.Context, req *pay_business.CreateAccountRequest) 
 	err = tx.Commit()
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "CreateAccount Commit err: %v", err)
-		retCode = code.ErrorServer
+		retCode = code.TransactionFailed
 		return
 	}
 	return

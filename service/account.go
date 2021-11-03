@@ -78,14 +78,19 @@ func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) 
 		retCode = code.ErrorServer
 		return
 	}
+	defer func() {
+		if retCode != code.Success {
+			err := tx.Rollback()
+			if err != nil {
+				kelvins.ErrLogger.Errorf(ctx, "AccountCharge Rollback err: %v", err)
+				return
+			}
+		}
+	}()
 	for i := 0; i < len(req.Owner); i++ {
 		lastTxId := uuid.New().String()
 		account, exist := ownerToAccount[req.Owner[i]]
 		if !exist {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "AccountCharge Rollback err: %v", errRollback)
-			}
 			retCode = code.UserAccountNotExist
 			return
 		}
@@ -111,30 +116,18 @@ func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) 
 		transaction.Fingerprint = genTransactionFingerprint(&transaction)
 		err = repository.CreateTransaction(tx, &transaction)
 		if err != nil {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "CreateTransaction Rollback err: %v, transaction: %v", errRollback, json.MarshalToStringNoError(transaction))
-			}
 			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction err: %v, transaction: %v", err, json.MarshalToStringNoError(transaction))
 			retCode = code.ErrorServer
 			return
 		}
 		balanceOld, err := decimal.NewFromString(account.Balance)
 		if err != nil {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "CreateTransaction balanceOld Rollback err: %v", errRollback)
-			}
 			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction balanceOld NewFromString err: %v", err)
 			retCode = code.ErrorServer
 			return
 		}
 		balanceDiff, err := decimal.NewFromString(req.Amount)
 		if err != nil {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "CreateTransaction balanceDiff Rollback err: %v", errRollback)
-			}
 			kelvins.ErrLogger.Errorf(ctx, "CreateTransaction balanceDiff NewFromString err: %v", err)
 			retCode = code.ErrorServer
 			return
@@ -153,26 +146,18 @@ func AccountCharge(ctx context.Context, req *pay_business.AccountChargeRequest) 
 		}
 		rowsAffected, err := repository.ChangeAccount(tx, updateAccountWhere, updateAccountMaps)
 		if err != nil {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
-			}
 			kelvins.ErrLogger.Errorf(ctx, "ChangeAccount err: %v, where: %v, maps: %v", err, json.MarshalToStringNoError(updateAccountWhere), json.MarshalToStringNoError(updateAccountMaps))
 			return code.ErrorServer
 		}
 		// 没有符合条件的数据行，说明没有更新成功
 		if rowsAffected != 1 {
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				kelvins.ErrLogger.Errorf(ctx, "ChangeAccount Rollback err: %v", errRollback)
-			}
 			return code.TransactionFailed
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
 		kelvins.ErrLogger.Errorf(ctx, "AccountCharge Commit err: %v", err)
-		retCode = code.ErrorServer
+		retCode = code.TransactionFailed
 		return
 	}
 	return
